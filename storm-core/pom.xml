@@ -22,7 +22,6 @@
         <groupId>org.apache.storm</groupId>
         <version>0.9.3-incubating-SNAPSHOT</version>
     </parent>
-    <groupId>org.apache.storm</groupId>
     <artifactId>storm-core</artifactId>
     <packaging>jar</packaging>
     <name>Storm Core</name>

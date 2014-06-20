@@ -15,6 +15,10 @@
 ;; limitations under the License.
 (ns backtype.storm.daemon.supervisor
   (:import [backtype.storm.scheduler ISupervisor])
+  ;; Uniroma2 Begin section
+  (:import [it.uniroma2.adaptivescheduler AdaptationManager])
+  (:import [java.util.concurrent.locks ReentrantReadWriteLock])
+  ;; End section
   (:use [backtype.storm bootstrap])
   (:use [backtype.storm.daemon common])
   (:require [backtype.storm.daemon [worker :as worker]])
@@ -199,6 +203,10 @@
                                (log-error t "Error when processing event")
                                (halt-process! 20 "Error when processing an event")
                                ))
+    ;; Uniroma2 - Section add assignment-lock to global shared data
+    :assignment-lock (ReentrantReadWriteLock.)
+    :adaptation-manager (atom nil)
+    ;; End section
    })
 
 (defn sync-processes [supervisor]
@@ -377,6 +385,11 @@
                                                 (conf SUPERVISOR-SCHEDULER-META)
                                                 ((:uptime supervisor)))))]
     (heartbeat-fn)
+    ;; Uniroma2 - Begin section create adaptation manager
+    (reset! (:adaptation-manager supervisor) (AdaptationManager. (:isupervisor supervisor) (:assignment-lock supervisor)))
+    (.start @(:adaptation-manager supervisor))
+    ;; End section create adaptation manager
+
     ;; should synchronize supervisor so it doesn't launch anything after being down (optimization)
     (schedule-recurring (:timer supervisor)
                         0
@@ -397,6 +410,9 @@
                (log-message "Shutting down supervisor " (:supervisor-id supervisor))
                (reset! (:active supervisor) false)
                (cancel-timer (:timer supervisor))
+               ;; Uniroma2 - Begin secttion
+               (.stop @(:adaptation-manager supervisor))
+               ;; End section
                (.shutdown event-manager)
                (.shutdown processes-event-manager)
                (.disconnect (:storm-cluster-state supervisor)))
