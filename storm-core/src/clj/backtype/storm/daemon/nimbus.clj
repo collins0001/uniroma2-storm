@@ -27,6 +27,10 @@
   (:use [backtype.storm bootstrap util])
   (:use [backtype.storm.config :only [validate-configs-with-schemas]])
   (:use [backtype.storm.daemon common])
+  ;; Uniroma2 Begin section
+  (:use [it.uniroma2.adaptivescheduler nimbus-extended-functions])
+  ;; End section
+
   (:gen-class
     :methods [^{:static true} [launch [backtype.storm.scheduler.INimbus] void]]))
 
@@ -76,6 +80,10 @@
                                  (halt-process! 20 "Error when processing an event")
                                  ))
      :scheduler (mk-scheduler conf inimbus)
+     ;; Uniroma 2 - create cleaner
+     :centralized-cleaner (create-centralized-cleaner conf)
+     ;; end section 
+
      }))
 
 (defn inbox [nimbus]
@@ -543,10 +551,43 @@
     (count (.getSlots scheduler-assignment))
     0 ))
 
+;; Uniroma 2
+
+(defn- stream->fields [^StormTopology topology component]
+  (->> (ThriftTopologyUtils/getComponentCommon topology component)
+       .get_streams
+       (map (fn [[s info]] [s (Fields. (.get_output_fields info))]))
+       (into {})
+       (HashMap.)))
+
+(defn- component->stream->fields [^StormTopology topology]
+  (->> (ThriftTopologyUtils/getComponentIds topology)
+       (map (fn [c] [c (stream->fields topology c)]))
+       (into {})
+       (HashMap.)))
+
+(defn nimbus-build-topology-context[conf storm-id]
+  (let [storm-topology (read-storm-topology conf storm-id)
+			  storm-conf (read-storm-conf conf storm-id)
+			  system-topology (system-topology! storm-conf storm-topology)
+			  task->component (HashMap. (storm-task-info storm-topology storm-conf))
+			  component->sorted-tasks (->> task->component reverse-map (map-val sort))
+			  component->stream->fields (component->stream->fields system-topology)]
+
+    (GeneralTopologyContext. system-topology
+                             storm-conf 
+                             task->component 
+                             component->sorted-tasks 
+                             component->stream->fields
+                             storm-id)))
+;; end section 
+
+
 ;; public so it can be mocked out
 (defn compute-new-topology->executor->node+port [nimbus existing-assignments topologies scratch-topology-id]
   (let [conf (:conf nimbus)
         storm-cluster-state (:storm-cluster-state nimbus)
+        
         topology->executors (compute-topology->executors nimbus (keys existing-assignments))
         ;; update the executors heartbeats first.
         _ (update-all-heartbeats! nimbus existing-assignments topology->executors)
@@ -584,9 +625,29 @@
         supervisors (read-all-supervisor-details nimbus all-scheduling-slots supervisor->dead-ports)
         cluster (Cluster. (:inimbus nimbus) supervisors topology->scheduler-assignment)
 
-        ;; call scheduler.schedule to schedule all the topologies
-        ;; the new assignments for all the topologies are in the cluster object.
-        _ (.schedule (:scheduler nimbus) topologies cluster)
+        ;; Uniroma 2 - retrieve topologies context 
+        topology-ids (.active-storms storm-cluster-state)
+        topologies-context (into {} (for [tid topology-ids]
+                              {tid (nimbus-build-topology-context conf tid )}))
+
+        ;; Uniroma 2 - Execute entralized cleaner         
+	      _ (when (conf ADAPTIVE-SCHEDULER-ENABLED)
+	          (.cleanZKInformation (:centralized-cleaner nimbus) topologies cluster)
+	          )
+        
+        ;; Uniroma 2 - Topology context is passed to the scheduler 
+        ;; if location-aware option has been set to true
+        _ (if (conf ADAPTIVE-SCHEDULER-INITIAL-SCHEDULER-LOCATION-AWARE)
+             ;; Uniroma 2 - call scheduler.scheduleUsingContext to schedule all the topologies
+             ;; the new assignments for all the topologies are in the cluster object.
+             (.scheduleUsingContext (:scheduler nimbus) topologies cluster topologies-context)
+             
+             ;; call scheduler.schedule to schedule all the topologies
+             ;; the new assignments for all the topologies are in the cluster object.
+             (.schedule (:scheduler nimbus) topologies cluster)
+          )
+        ;; end section 
+        
         new-scheduler-assignments (.getAssignments cluster)
         ;; add more information to convert SchedulerAssignment to Assignment
         new-topology->executor->node+port (compute-topology->executor->node+port new-scheduler-assignments)]

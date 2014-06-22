@@ -30,3 +30,6 @@ target
 .idea
 .*
 !/.gitignore
+
+storm-core/storm-local/
+*.db

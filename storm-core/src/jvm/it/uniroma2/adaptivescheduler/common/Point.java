@@ -1,15 +1,39 @@
-package it.uniroma2.adaptivescheduler.networkspace;
+package it.uniroma2.adaptivescheduler.common;
 
 import java.security.InvalidParameterException;
 
+/**
+ * Point of the network space
+ * 
+ * This class represents a point inside the network space, it stores its coordinates
+ * and exposes simple functions to deal with them . 
+ * 
+ * @author Matteo Nardelli
+ *
+ */
 public class Point {
 
 	private double[] coordinates;
 
+	/**
+	 * Create a new point. 
+	 * 
+	 * @param dimensionality
+	 */
 	public Point(int dimensionality) {
 		coordinates = new double[dimensionality];
+		
+		for (int i = 0; i < coordinates.length; i++) {
+			coordinates[i] = 0.0;
+		}
+	
 	}
 
+	/**
+	 * Create a new point. 
+	 * 
+	 * @param initialCoordinates
+	 */
 	public Point(double[] initialCoordinates) {
 
 		if (initialCoordinates == null) {
@@ -24,6 +48,11 @@ public class Point {
 
 	}
 
+	/**
+	 * Create a new point. 
+	 * 
+	 * @param otherPoint
+	 */
 	public Point(Point otherPoint) {
 
 		if (otherPoint == null) {
@@ -38,12 +67,25 @@ public class Point {
 
 	}
 
+	/**
+	 * Set the value associated to a dimension 
+	 * 
+	 * @param dimension
+	 * @param value
+	 */
 	public void set(int dimension, double value) {
 		if (dimension < coordinates.length) {
 			coordinates[dimension] = value;
 		}
 	}
 
+	
+	/**
+	 * Get the value associated to a dimension 
+	 * 
+	 * @param dimension
+	 * @return
+	 */
 	public double get(int dimension) {
 		if (dimension < coordinates.length) {
 			return coordinates[dimension];
@@ -51,33 +93,25 @@ public class Point {
 		return Double.NaN;
 	}
 
+	/**
+	 * Get the dimensionality of the Point. 
+	 * 
+	 * It should be equal to the dimensionality of the space. 
+	 * @return
+	 */
 	public int getDimensionality() {
 		return coordinates.length;
 	}
 
-	// public void add(Point otherVector){
-	// if (otherVector.coordinates == null || coordinates.length !=
-	// otherVector.coordinates.length){
-	// System.out.println("Vectors have different dimensionality");
-	// }
-	//
-	// for (int i = 0; i < coordinates.length; i++)
-	// coordinates[i] += otherVector.coordinates[i];
-	//
-	// for (int i = 0; i < coordinates.length; i++)
-	// System.out.println("[" + i + "] " + coordinates[i]);
-	//
-	// }
-
-	public Point getInverse() {
-
-		Point inverse = new Point(coordinates.length);
-
-		for (int i = 0; i < coordinates.length; i++)
-			inverse.set(i, -coordinates[i]);
-
-		return inverse;
-	}
+//	public Point getInverse() {
+//
+//		Point inverse = new Point(coordinates.length);
+//
+//		for (int i = 0; i < coordinates.length; i++)
+//			inverse.set(i, -coordinates[i]);
+//
+//		return inverse;
+//	}
 
 	@Override
 	public String toString() {
@@ -89,4 +123,7 @@ public class Point {
 		return output;
 	}
 
+	public Point clone(){
+		return new Point(coordinates);
+	}
 }

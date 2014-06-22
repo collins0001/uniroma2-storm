@@ -17,10 +17,13 @@
   (:import [backtype.storm.scheduler ISupervisor])
   ;; Uniroma2 Begin section
   (:import [it.uniroma2.adaptivescheduler AdaptationManager])
-  (:import [java.util.concurrent.locks ReentrantReadWriteLock])
   ;; End section
   (:use [backtype.storm bootstrap])
   (:use [backtype.storm.daemon common])
+  ;; Uniroma2 Begin section
+  (:use [it.uniroma2.adaptivescheduler supervisor-extended-functions])
+  ;; End section
+
   (:require [backtype.storm.daemon [worker :as worker]])
   (:gen-class
     :methods [^{:static true} [launch [backtype.storm.scheduler.ISupervisor] void]]))
@@ -203,8 +206,7 @@
                                (log-error t "Error when processing event")
                                (halt-process! 20 "Error when processing an event")
                                ))
-    ;; Uniroma2 - Section add assignment-lock to global shared data
-    :assignment-lock (ReentrantReadWriteLock.)
+    ;; Uniroma2 - Section add adaptation-manager to global shared data
     :adaptation-manager (atom nil)
     ;; End section
    })
@@ -223,8 +225,7 @@
         new-worker-ids (into
                         {}
                         (for [port (keys reassign-executors)]
-                          [port (uuid)]))
-        ]
+                          [port (uuid)]))]
     ;; 1. to kill are those in allocated that are dead or disallowed
     ;; 2. kill the ones that should be dead
     ;;     - read pids, kill -9 and individually remove file
@@ -347,6 +348,7 @@
             LS-LOCAL-ASSIGNMENTS
             new-assignment)
       (reset! (:curr-assignment supervisor) new-assignment)
+
       ;; remove any downloaded code that's no longer assigned or active
       ;; important that this happens after setting the local assignment so that
       ;; synchronize-supervisor doesn't try to launch workers for which the
@@ -386,8 +388,20 @@
                                                 ((:uptime supervisor)))))]
     (heartbeat-fn)
     ;; Uniroma2 - Begin section create adaptation manager
-    (reset! (:adaptation-manager supervisor) (AdaptationManager. (:isupervisor supervisor) (:assignment-lock supervisor)))
-    (.start @(:adaptation-manager supervisor))
+    (reset! (:adaptation-manager supervisor) (AdaptationManager. (:isupervisor supervisor)))
+    (when (conf ADAPTIVE-SCHEDULER-ENABLED)
+		  ; 1. inizializzare l'adaptation manager
+		  ; 2. eseguire periodicamente l'update del network space
+		  ; 3. eseguire periodicamente il continous scheduler
+		  (.initialize @(:adaptation-manager supervisor))
+      (schedule-recurring (:timer supervisor) 0 
+                          (conf ADAPTIVE-SCHEDULER-NETWORK-SPACE-ROUND-DURATION)
+                          (fn [] (update-network-space supervisor)))
+      (schedule-recurring (:timer supervisor) 0 
+                          (conf ADAPTIVE-SCHEDULER-CONTINOUS-SCHEDULER-FREQ-SEC)
+                          (fn [] (execute-continuous-scheduler supervisor)))
+      )
+             
     ;; End section create adaptation manager
 
     ;; should synchronize supervisor so it doesn't launch anything after being down (optimization)

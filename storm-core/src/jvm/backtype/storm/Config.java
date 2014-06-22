@@ -843,6 +843,186 @@ public class Config extends HashMap<String, Object> {
     public static final String ISOLATION_SCHEDULER_MACHINES = "isolation.scheduler.machines";
     public static final Object ISOLATION_SCHEDULER_MACHINES_SCHEMA = Map.class;
 
+    
+
+    /*
+    * Following section contains configuration parameters for the
+    * Adaptive Scheduler developed by the University of Rome "Tor Vergata" 
+    * 
+    * Author: Matteo Nardelli
+    */
+    
+    /**
+     * Activate uniroma2 extension which executes a location-aware adaptive scheduler
+     */
+    public static final String ADAPTIVE_SCHEDULER_ENABLED = "adaptivescheduler.enabled";
+    public static final Object ADAPTIVE_SCHEDULER_ENABLED_SCHEMA = Boolean.class;
+
+    
+    /**
+     * Frequency used to update the network space. 
+     */
+    public static final String ADAPTIVE_SCHEDULER_NETWORK_SPACE_ROUND_DURATION = "adaptivescheduler.network_space.round.duration";
+    public static final Object ADAPTIVE_SCHEDULER_NETWORK_SPACE_ROUND_DURATION_SCHEMA = Number.class;
+
+    /**
+     * Frequency used to execute the (local) continuous scheduler. 
+     * Continuous scheduler is executed within the supervisor
+     */
+    public static final String ADAPTIVE_SCHEDULER_CONTINOUS_SCHEDULER_FREQ_SEC = "adaptivescheduler.continuous_scheduler.freq.sec";
+    public static final Object ADAPTIVE_SCHEDULER_CONTINOUS_SCHEDULER_FREQ_SEC_SCHEMA = Number.class;
+
+    
+    /**
+     * Vivaldi algorithm parameter. 
+     * 
+     * Alpha is used to determinate delta; delta represents the application 
+     * time of the vivaldi force to the massless point which is representing 
+     * the node into the network space 
+     */
+    public static final String ADAPTIVE_SCHEDULER_NETWORK_SPACE_ALPHA = "adaptivescheduler.network_space.alpha";
+    public static final Object ADAPTIVE_SCHEDULER_NETWORK_SPACE_ALPHA_SCHEMA = Number.class;
+
+    /**
+     * Vivaldi algorithm parameter. 
+     * 
+     * Beta is the parameter used to compute the exponential moving average of prediction errors. 
+     * Prediction error is update as follow: 
+     *  e_i = sample * beta * W_factor + e_i * (1 - beta * W_factor)
+     *  
+     * Beta should be a value between 0 and 1.
+     */
+    public static final String ADAPTIVE_SCHEDULER_NETWORK_SPACE_BETA = "adaptivescheduler.network_space.beta";
+    public static final Object ADAPTIVE_SCHEDULER_NETWORK_SPACE_BETA_SCHEMA = Number.class;
+    
+
+    /**
+     * Network space server port. 
+     * 
+     * To construct the network space, nodes need to exchange coordinates and measure latency among them.
+     * It's istantiated a new server on each node for this purpose. 
+     * 
+     */
+    public static final String ADAPTIVE_SCHEDULER_NETWORK_SPACE_SERVER_PORT = "adaptivescheduler.network_space.server.port";
+    public static final Object ADAPTIVE_SCHEDULER_NETWORK_SPACE_SERVER_PORT_SCHEMA = Number.class;
+
+    /**
+     * Confidence threshold to reach before publishing the coordinate to ZooKeeper 
+     * 
+     */
+    public static final String ADAPTIVE_SCHEDULER_NETWORK_SPACE_CONFIDENCE_THRESHOLD = "adaptivescheduler.network_space.confidence_threshold";
+    public static final Object ADAPTIVE_SCHEDULER_NETWORK_SPACE_CONFIDENCE_THRESHOLD_SCHEMA = Number.class;
+
+    /**
+     * Round between two consecutive coordinate publication to ZooKeeper 
+     * 
+     */
+    public static final String ADAPTIVE_SCHEDULER_NETWORK_SPACE_ROUND_BEETWEEN_PUBLICATION = "adaptivescheduler.network_space.round_between_publications";
+    public static final Object ADAPTIVE_SCHEDULER_NETWORK_SPACE_ROUND_BEETWEEN_PUBLICATION_SCHEMA = Number.class;
+
+
+    /**
+     * Activate worker monitor
+     */
+    public static final String ADAPTIVE_SCHEDULER_WORKER_MONITOR_ENABLED = "adaptivescheduler.worker_monitor.enabled";
+    public static final Object ADAPTIVE_SCHEDULER_WORKER_MONITOR_ENABLED_SCHEMA = Boolean.class;
+
+
+    /**
+     * Frequency used to compute stats for each worker.
+     */
+    public static final String ADAPTIVE_SCHEDULER_WORKER_MONITOR_COMPUTE_STATS_FREQ_SEC = "adaptivescheduler.worker_monitor.stats.freq.sec";
+    public static final Object ADAPTIVE_SCHEDULER_WORKER_MONITOR_COMPUTE_STATS_FREQ_SEC_SCHEMA = Number.class;
+
+    
+    /**
+     * Measurement database port
+     */
+    public static final String ADAPTIVE_SCHEDULER_INTERNAL_DATABASE_PORT = "adaptivescheduler.internal.database.port";
+    public static final Object ADAPTIVE_SCHEDULER_INTERNAL_DATABASE_PORT_SCHEMA = Number.class;
+
+
+    /**
+     * Continuous scheduler 
+     * Spring force for each executor is computed until its magnitude is below the force threshold.
+     * 
+     * See Analyze phase of Continuous scheduler 
+     */
+    public static final String ADAPTIVE_SCHEDULER_CONTINUOUS_SCHEDULER_FORCE_THRESHOLD = "adaptivescheduler.continuous_scheduler.force.threshold";
+    public static final Object ADAPTIVE_SCHEDULER_CONTINUOUS_SCHEDULER_FORCE_THRESHOLD_SCHEMA = Number.class;
+
+    /**
+     * Continuous scheduler application time of the spring force on local executors. 
+     * The movement of the operator through latency space is dampened by this 
+     * factor (delta) to avoid unnecessary oscillation around the optimal location.
+     * 
+     * See Analyze phase of Continuous scheduler 
+     */
+    public static final String ADAPTIVE_SCHEDULER_CONTINUOUS_SCHEDULER_FORCE_DELTA = "adaptivescheduler.continuous_scheduler.force.delta";
+    public static final Object ADAPTIVE_SCHEDULER_CONTINUOUS_SCHEDULER_FORCE_DELTA_SCHEMA = Number.class;
+
+    /**
+     * Continuous scheduler: max executors per slot 
+     * 
+     * See Planning phase of Continuous scheduler 
+     */
+    public static final String ADAPTIVE_SCHEDULER_CONTINUOUS_SCHEDULER_MAX_EXECUTOR_PER_SLOT = "adaptivescheduler.continuous_scheduler.max_exec_per_slot";
+    public static final Object ADAPTIVE_SCHEDULER_CONTINUOUS_SCHEDULER_MAX_EXECUTOR_PER_SLOT_SCHEMA = Number.class;
+
+    /**
+     * Continuous scheduler: K used by the K Nearest Node retriever
+     * 
+     * See Planning phase of Continuous scheduler 
+     */
+    public static final String ADAPTIVE_SCHEDULER_CONTINUOUS_SCHEDULER_K_NEAREST_NODE = "adaptivescheduler.continuous_scheduler.nearest_node.k";
+    public static final Object ADAPTIVE_SCHEDULER_CONTINUOUS_SCHEDULER_K_NEAREST_NODE_SCHEMA = Number.class;
+
+    /**
+     * Continuous scheduler: migration threshold 
+     * 
+     * Migration threshold is used when another node (B) is nearer than the current one (A). 
+     * Since migration can be expansive, the system performs migration only if the relative 
+     * distance ( (dB - dA) / (dB + dA) ) is greater than this migration threshold. Migration
+     * threshold is a number between 0 and 1
+     * 
+     * Note: if migration threshold is set to 0, migration is always performed. 
+     * See Planning phase of Continuous scheduler 
+     */
+    public static final String ADAPTIVE_SCHEDULER_CONTINUOUS_SCHEDULER_MIGRATION_THRESHOLD = "adaptivescheduler.continuous_scheduler.migration_threshold";
+    public static final Object ADAPTIVE_SCHEDULER_CONTINUOUS_SCHEDULER_MIGRATION_THRESHOLD_SCHEMA = Number.class;
+
+    /**
+     * Initial scheduler: schedule executors in a location-aware fashion.
+     * 
+     * If false is indicated, the scheduler assigns executors using a round-robin 
+     * strategy 
+     * 
+     * See Initial scheduler 
+     */
+    public static final String ADAPTIVE_SCHEDULER_INITIAL_SCHEDULER_LOCATION_AWARE = "adaptivescheduler.initial_scheduler.location_aware";
+    public static final Object ADAPTIVE_SCHEDULER_INITIAL_SCHEDULER_LOCATION_AWARE_SCHEMA = Boolean.class;
+
+    /**
+     * Space used by the placement algorithm. The extended space is made of 3 dimensions, 
+     * 2 of them are latency dimensions and the last one represent node usage.
+     */
+    public static final String ADAPTIVE_SCHEDULER_USE_EXTENDED_SPACE = "adaptivescheduler.space.use_extended_space";
+    public static final Object ADAPTIVE_SCHEDULER_USE_EXTENDED_SPACE_SCHEMA = Boolean.class;
+
+
+    /**
+     * XXX: to remove 
+     */
+    public static final String ADAPTIVE_SCHEDULER_JUST_MONITOR = "adaptivescheduler.just_monitor";
+    public static final Object ADAPTIVE_SCHEDULER_JUST_MONITOR_SCHEMA = Boolean.class;
+    
+    
+    /*
+    * End of the section added by the University of Rome "Tor Vergata"
+    */
+    
+    
+    
     public static void setDebug(Map conf, boolean isOn) {
         conf.put(Config.TOPOLOGY_DEBUG, isOn);
     } 

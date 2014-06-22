@@ -22,6 +22,9 @@
   (:import [backtype.storm.utils TransferDrainer])
   (:import [backtype.storm.messaging TransportFactory])
   (:import [backtype.storm.messaging TaskMessage IContext IConnection])
+  ;; Uniroma2 Begin section
+  (:import [it.uniroma2.adaptivescheduler WorkerMonitor])
+  ;; End section
   (:gen-class))
 
 (bootstrap)
@@ -101,6 +104,7 @@
         task-getter (comp #(get task->short-executor %) fast-first)]
     (fn [tuple-batch]
       (let [grouped (fast-group-by task-getter tuple-batch)]
+        
         (fast-map-iter [[short-executor pairs] grouped]
           (let [q (short-executor-receive-queue-map short-executor)]
             (if q
@@ -122,13 +126,22 @@
             
             ;;Using java objects directly to avoid performance issues in java code
             (let [node+port (get @task->node+port task)]
+              
               (when (not (.get remoteMap node+port))
                 (.put remoteMap node+port (ArrayList.)))
               (let [remote (.get remoteMap node+port)]
                 (.add remote (TaskMessage. task (.serialize serializer tuple)))
                  ))))
-        
+
+        ;; Uniroma2 - Adaptive scheduler
+        (fast-list-iter [[task tuple] tuple-batch]
+          (do 
+            (when (not (nil? (:worker-monitor worker)))
+              (.notifyOutgoingTuple (:worker-monitor worker) task tuple))))  
+        ;; end section 
+
         (local-transfer local)
+        
         (disruptor/publish transfer-queue remoteMap)
           ))))
 
@@ -227,6 +240,13 @@
       :uptime (uptime-computer)
       :default-shared-resources (mk-default-resources <>)
       :user-shared-resources (mk-user-resources <>)
+      ;; Uniroma2 - Additional information to worker shared data
+      :worker-monitor (WorkerMonitor. storm-id assignment-id worker-id port ) 
+      :timer (mk-timer :kill-fn (fn [t]
+                                    (log-error t "Error when processing event")
+                                    (halt-process! 20 "Error when processing an event")
+                                ))
+      ;; End of the section  
       :transfer-local-fn (mk-transfer-local-fn <>)
       :receiver-thread-count (get storm-conf WORKER-RECEIVER-THREAD-COUNT)
       :transfer-fn (mk-transfer-fn <>)
@@ -315,7 +335,6 @@
     (disruptor/clojure-handler
       (fn [packets _ batch-end?]
         (.add drainer packets)
-        
         (when batch-end?
           (read-locked endpoint-socket-lock
             (let [node+port->socket @node+port->socket]
@@ -354,6 +373,7 @@
   (when (= :distributed (cluster-mode conf))
     (touch (worker-pid-path conf worker-id (process-pid))))
   (let [worker (worker-data conf shared-mq-context storm-id assignment-id port worker-id)
+        
         heartbeat-fn #(do-heartbeat worker)
 
         ;; do this here so that the worker process dies if this fails
@@ -406,7 +426,12 @@
                     (cancel-timer (:refresh-active-timer worker))
                     (cancel-timer (:executor-heartbeat-timer worker))
                     (cancel-timer (:user-timer worker))
-                    
+                  
+                    ;; Uniroma2 - Begin secttion
+                    (cancel-timer (:timer worker)) 
+                    (.stop (:worker-monitor worker))
+                    ;; End section
+
                     (close-resources worker)
                     
                     ;; TODO: here need to invoke the "shutdown" method of WorkerHook
@@ -434,6 +459,20 @@
     
     (schedule-recurring (:refresh-connections-timer worker) 0 (conf TASK-REFRESH-POLL-SECS) refresh-connections)
     (schedule-recurring (:refresh-active-timer worker) 0 (conf TASK-REFRESH-POLL-SECS) (partial refresh-storm-active worker))
+
+
+    ;; Uniroma2 - Begin section create adaptation manager
+    (when (conf ADAPTIVE-SCHEDULER-WORKER-MONITOR-ENABLED)
+      (.initialize (:worker-monitor worker))
+      (.computeStats (:worker-monitor worker))
+      (schedule-recurring (:timer worker) 0      
+                          (conf ADAPTIVE-SCHEDULER-WORKER-MONITOR-COMPUTE-STATS-FREQ-SEC)                           
+                          (fn [] (.computeStats (:worker-monitor worker) ))
+      )
+    )
+    ;; End section  
+
+
 
     (log-message "Worker has topology config " (:storm-conf worker))
     (log-message "Worker " worker-id " for storm " storm-id " on " assignment-id ":" port " has finished loading")

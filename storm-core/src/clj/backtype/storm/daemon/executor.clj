@@ -628,6 +628,10 @@
                                   (.setProcessSampleStartTime tuple now))
                                 (when execute-sampler?
                                   (.setExecuteSampleStartTime tuple now))
+                                ;; Uniroma2 - Adaptive Scheduler
+                                (when (not (nil? (:worker-monitor (:worker executor-data))))
+                                  (.notifyIncomingTuple (:worker-monitor (:worker executor-data)) task-id tuple))
+                                ;; end section 
                                 (.execute bolt-obj tuple)
                                 (let [delta (tuple-execute-time-delta! tuple)]
                                   (task/apply-hooks user-context .boltExecute (BoltExecuteInfo. tuple task-id delta))

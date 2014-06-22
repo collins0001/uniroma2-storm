@@ -155,7 +155,6 @@ class Server implements IConnection {
      * @throws InterruptedException
      */
     protected void enqueue(List<TaskMessage> msgs) throws InterruptedException {
-      
       if (null == msgs || msgs.size() == 0 || closing) {
         return;
       }
@@ -175,6 +174,7 @@ class Server implements IConnection {
     }
     
     public Iterator<TaskMessage> recv(int flags, int receiverId)  {
+    	
       if (closing) {
         return closeMessage.iterator();
       }

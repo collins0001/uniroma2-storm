@@ -151,3 +151,33 @@ topology.tuple.serializer: "backtype.storm.serialization.types.ListDelegateSeria
 topology.trident.batch.emit.interval.millis: 500
 
 dev.zookeeper.path: "/tmp/dev-storm-zookeeper"
+
+### Adaptive Scheduler 
+# Extension developed by the University of Rome "Tor Vergata"
+# Author: Matteo Nardelli
+adaptivescheduler.enabled: true
+adaptivescheduler.network_space.round.duration: 30
+adaptivescheduler.continuous_scheduler.freq.sec: 30
+
+adaptivescheduler.network_space.alpha: 0.5
+adaptivescheduler.network_space.beta: 0.5
+adaptivescheduler.network_space.server.port: 9110
+adaptivescheduler.network_space.confidence_threshold: 0.70
+adaptivescheduler.network_space.round_between_publications: 1
+
+adaptivescheduler.worker_monitor.enabled: true
+adaptivescheduler.worker_monitor.stats.freq.sec: 5
+
+adaptivescheduler.internal.database.port: 3603
+
+adaptivescheduler.continuous_scheduler.force.threshold: 1.0
+adaptivescheduler.continuous_scheduler.force.delta: 0.1
+adaptivescheduler.continuous_scheduler.max_exec_per_slot: 4
+adaptivescheduler.continuous_scheduler.nearest_node.k: 5
+adaptivescheduler.continuous_scheduler.migration_threshold: 0.15
+
+adaptivescheduler.initial_scheduler.location_aware: false
+
+adaptivescheduler.just_monitor: false
+adaptivescheduler.space.use_extended_space: false
+

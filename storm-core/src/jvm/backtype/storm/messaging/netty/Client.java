@@ -188,7 +188,7 @@ public class Client implements IConnection {
      * Enqueue task messages to be sent to server
      */
     synchronized public void send(Iterator<TaskMessage> msgs) {
-
+    	
         // throw exception if the client is being closed
         if (closing) {
             throw new RuntimeException("Client is being closed, and does not take requests any more");
@@ -228,6 +228,13 @@ public class Client implements IConnection {
                 flushRequest(channel, toBeFlushed);
                 
             } else {
+            	/* XXX: Reconnection: pensing messages be lost */
+            	if (!channel.isConnected()){
+                    LOG.debug("Netty Client -- Channel NOT connected; maybe a reassignment has been performed. Reconnecting...");
+                    channelRef.set(null);
+            		connect();
+            	}
+            	
                 // when channel is NOT writable, it means the internal netty buffer is full. 
                 // In this case, we can try to buffer up more incoming messages.
                 flushCheckTimer.set(System.currentTimeMillis() + flushCheckInterval);
@@ -332,8 +339,7 @@ public class Client implements IConnection {
 
                 pendings.decrementAndGet();
                 if (!future.isSuccess()) {
-                    LOG.info(
-                            "failed to send requests to " + remote_addr.toString() + ": ", future.getCause());
+                    LOG.info("failed to send requests to " + remote_addr.toString() + ": ", future.getCause());
 
                     Channel channel = future.getChannel();
 
