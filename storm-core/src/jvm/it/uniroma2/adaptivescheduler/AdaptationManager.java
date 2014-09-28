@@ -170,11 +170,9 @@ public class AdaptationManager {
 	}
 	
 	
-	/* XXX: linkata da mk-supervisor (shutdown) */
+	/* This function is used in mk-supervisor (function: shutdown) */
 	public void stop(){
-		
 		networkSpaceManager.stop();
-		
 	}
 	
 	/**
@@ -205,12 +203,6 @@ public class AdaptationManager {
 				others.add(otherSupervisor);
 		}
 		
-
-		/* 
-		 * XXX: potrebbe essere una buona idea separare a basso livello 
-		 * 		queste due operazioni.. si spera i nodi siano 
-		 * 		abbastanza stabili 
-		 */
 
 		/* Update nodes the space manager can use */
 		networkSpaceManager.updateNodes(others);

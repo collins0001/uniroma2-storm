@@ -91,7 +91,7 @@ public class DatabaseManager {
 	
 	public void cleanup(){
 
-		// XXX: rendere l'operazione più efficiente? 
+		// XXX: this operation can be implemented in a more efficient way
 		
 		try {
 			deleteTables();

@@ -228,7 +228,7 @@ public class Client implements IConnection {
                 flushRequest(channel, toBeFlushed);
                 
             } else {
-            	/* XXX: Reconnection: pensing messages be lost */
+            	/* XXX: Reconnection: pending messages be lost */
             	if (!channel.isConnected()){
                     LOG.debug("Netty Client -- Channel NOT connected; maybe a reassignment has been performed. Reconnecting...");
                     channelRef.set(null);

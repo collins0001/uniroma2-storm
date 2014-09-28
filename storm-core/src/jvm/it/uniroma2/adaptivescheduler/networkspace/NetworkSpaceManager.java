@@ -764,5 +764,9 @@ public class NetworkSpaceManager {
 		}
 	}
 
-	
+
+	public boolean usingExtendedSpace(){
+		return EXTENDED_SPACE;
+	}
+
 }

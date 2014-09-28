@@ -448,30 +448,41 @@ public class InitialScheduler implements IScheduler{
 			
 			System.out.println("Available Slot per round: " + availableSlotPerRound.size());
 			System.out.println("Executor pools: " + executorPools.size());
+
+			if (availableSlotPerRound.isEmpty()){
+				System.out.println("There are no available slot for current Executor Pool");
+				return;
+			}
 			
 			for(ExecutorPool ep : executorPools){
 				
 				if (!ep.isAssigned()){
 					/* 1. calculate new position into the network space */
+					System.out.println("-- Compute new position");
 					Point newCoordinates = computeNewPosition(ep);
 					
 					/* 2. map new position into a physical worker slot */
+					System.out.println("-- Compute new position");
 					WorkerSlot ws = retrieveNearestNode(newCoordinates, ep, topologyId, availableSlotPerRound, knownNetworkSpaceNodes);
 					
 					if (ws == null){
 						System.out.println("There are no available slot for current Executor Pool");
-						return;
+						/* XXX: this point should be modified; scheduler should check if another configuration is available */
+						return; 
 					}
 					
 					if (ep.getWorkerSlot() == null || !ep.getWorkerSlot().equals(ws)){
+						System.out.println("-- Compute new position: updated");
 						updated = true;
 					}
 					
 					/* Update Executor Pool with round informations */
+					System.out.println("-- Setting new worker slot");
 					ep.setWorkerSlot(ws);
 					ep.setPosition(getWorkerSlotCoordinates(knownNetworkSpaceNodes, ws));
 
 					/* Update available slots */
+					System.out.println("-- Updating available slot per round: " + availableSlotPerRound.size());
 					availableSlotPerRound.remove(ws);
 				}
 			}
@@ -509,7 +520,10 @@ public class InitialScheduler implements IScheduler{
 
 	private Point computeNewPosition(ExecutorPool executorPool){
 		
+		@SuppressWarnings("unused")
 		int statCounter = 0;
+		
+		int forcedExit = 10000;
 		
 		SpringForce f = null;
 		Point epNewCoordinates = null;
@@ -544,7 +558,8 @@ public class InitialScheduler implements IScheduler{
 			epNewCoordinates =  f.movePoint(epNewCoordinates, SPRING_FORCE_DELTA);
 			
 			statCounter++;
-		}while(f != null && !f.lessThan(SPRING_FORCE_THRESHOLD));
+			forcedExit--;
+		}while(f != null && !f.lessThan(SPRING_FORCE_THRESHOLD) && forcedExit > 0);
 		
 		if(DEBUG_RELAXATION_PLACEMENT)
 			System.out.println(" ==== Final position into the network space: " + epNewCoordinates + " (iterations: " + statCounter +")");
@@ -597,21 +612,21 @@ public class InitialScheduler implements IScheduler{
         		continue;
         	
         	String candidateId = n.getSupervisorId();
-//    		System.out.println("Candidate: ID: " + candidate);
+    		System.out.println("Candidate: ID: " + candidateId);
     		
 			/* Find available slot on nearest node */
 		    List<WorkerSlot> availableSlotsOnCandidateNode = getAvailableSlotOnCandidateNode(candidateId, availableSlot);
 
-//        	System.out.println("Available slots: " + availableSlotsOnCandidateNode);
+        	System.out.println("Available slots: " + availableSlotsOnCandidateNode);
         	
 		    if (availableSlotsOnCandidateNode == null || availableSlotsOnCandidateNode.isEmpty()){
-//		    	System.out.println("There are no available slots on supervisor " + candidate + "... ");
+		    	System.out.println("There are no available slots on supervisor ... ");
 		    	continue;
 		    } else {
 		    	
 		    	candidateSlot = availableSlotsOnCandidateNode.get(0);
 		    	if (candidateSlot == null){
-//		    		System.out.println("Candidate slot is null");
+		    		System.out.println("Candidate slot is null");
 		    		continue;
 		    	} else {
 		    		return candidateSlot;

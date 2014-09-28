@@ -1011,7 +1011,7 @@ public class Config extends HashMap<String, Object> {
 
 
     /**
-     * XXX: to remove 
+     * Disable continuous scheduler behaviour. If JustWatch no reassignment will take place. 
      */
     public static final String ADAPTIVE_SCHEDULER_JUST_MONITOR = "adaptivescheduler.just_monitor";
     public static final Object ADAPTIVE_SCHEDULER_JUST_MONITOR_SCHEMA = Boolean.class;
