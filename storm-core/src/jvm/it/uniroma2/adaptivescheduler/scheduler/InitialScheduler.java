@@ -467,8 +467,8 @@ public class InitialScheduler implements IScheduler{
 					
 					if (ws == null){
 						System.out.println("There are no available slot for current Executor Pool");
-						/* XXX: this point should be modified; scheduler should check if another configuration is available */
-						return; 
+						/* XXX: it was return; break is bettes to try a new configuration */
+						break;
 					}
 					
 					if (ep.getWorkerSlot() == null || !ep.getWorkerSlot().equals(ws)){
@@ -520,7 +520,6 @@ public class InitialScheduler implements IScheduler{
 
 	private Point computeNewPosition(ExecutorPool executorPool){
 		
-		@SuppressWarnings("unused")
 		int statCounter = 0;
 		
 		int forcedExit = 10000;

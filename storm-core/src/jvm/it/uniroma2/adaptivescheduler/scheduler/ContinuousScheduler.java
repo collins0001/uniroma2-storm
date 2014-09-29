@@ -12,9 +12,21 @@ import it.uniroma2.adaptivescheduler.space.KNearestNodes;
 import it.uniroma2.adaptivescheduler.space.Point;
 import it.uniroma2.adaptivescheduler.space.SimpleKNearestNodes;
 import it.uniroma2.adaptivescheduler.space.Space;
+import it.uniroma2.adaptivescheduler.space.SpaceFactory;
+import it.uniroma2.adaptivescheduler.utils.SystemStatusReader;
 import it.uniroma2.adaptivescheduler.vivaldi.NetworkSpaceManager;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
+import it.uniroma2.statserver.messages.DataRateReport;
+import it.uniroma2.statserver.messages.NewAssignmentReport;
 
+import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,8 +50,16 @@ import backtype.storm.scheduler.TopologyDetails;
 import backtype.storm.scheduler.WorkerSlot;
 import backtype.storm.task.GeneralTopologyContext;
 
+import com.google.gson.Gson;
+
 public class ContinuousScheduler {
 
+	/* XXX: */
+	private static final String XXX_STATSERVER_HOSTNAME = "160.80.97.159";
+	private static final int XXX_STATSERVER_PORT = 9027;
+	/* XXX: */
+	
+	
 	private double SPRING_FORCE_THRESHOLD = 1.0;
 	private double SPRING_FORCE_DELTA = 0.1;
 	private int K_NEAREST_NODE_TO_RETRIEVE = 5;
@@ -52,7 +72,8 @@ public class ContinuousScheduler {
 	private boolean DEBUG = true;
 	
 	private boolean JUST_WATCH = false;
-
+	private int round = 0;
+	
 	private ISupervisor supervisor;
 	private String nodeId;
 	private SimpleZookeeperClient zkClient; 
@@ -113,6 +134,9 @@ public class ContinuousScheduler {
 				System.out.println("Max executor per slot: " + MAX_EXECUTOR_PER_SLOT);
 			}
 			
+			
+			
+			// XXX:
 			Boolean bValue = (Boolean) config.get(Config.ADAPTIVE_SCHEDULER_JUST_MONITOR);
 			if (bValue != null){
 				JUST_WATCH = bValue.booleanValue();
@@ -176,6 +200,20 @@ public class ContinuousScheduler {
 		/* Remove not assigned topologies from cooldown buffer*/
 		cleanupCooldownCounter(assignments.keySet());
 
+		/* Save utilization on file */
+		saveUtilizationOnFile();
+		
+		/* XXX: */
+		for (String tid : assignments.keySet()){
+			TopologyDetails topology = topologies.getById(tid);
+			GeneralTopologyContext topologyContext = topologiesContext.get(tid);
+
+			List<AugmentedExecutorDetails> localExecutors = retrieveAllLocalExecutor(tid, topology, topologyContext, cluster);
+			computeStatistics(localExecutors, tid, topology, topologyContext, cluster, knownNodes);
+		}
+		/* XXX: */
+
+		
 		/* For each topology */
 		for (String tid : assignments.keySet()){
 			System.out.println("Selected topology: " + tid);
@@ -211,11 +249,15 @@ public class ContinuousScheduler {
 					continue;
 				}
 				
+				
+				/* XXX */
 				if (JUST_WATCH){
 					unsetMigration(tid, e.getComponentId());
 					continue;
 				}
-								
+				/* XXX */
+
+				
 				System.out.println("[2/4] Analyze phase...");
 				Point newExecutorPosition = analyze(e, tid, topology, topologyContext, cluster, knownNodes);
 			
@@ -229,6 +271,10 @@ public class ContinuousScheduler {
 			
 		}
 		
+		
+		/* XXX: stats */
+		round++;
+
 	}
 	
 	/**
@@ -630,6 +676,7 @@ public class ContinuousScheduler {
 		System.out.println("NEW ASSIGNMENT! We've confirmed executors:" + executorsToConfirm + " to slot: "
     			+ "[" + currentExecutorWorkerSlot.getNodeId() + ", " + currentExecutorWorkerSlot.getPort() + "]");
     	
+		notifyNewAssignments(topologyId, executorsToReassign, candidateSlot, executorsToConfirm, currentExecutorWorkerSlot);
 	}
 	
 	private Point computeInitialExecutorCoordinates(Point initialExecutorCoordinates){
@@ -1119,6 +1166,208 @@ public class ContinuousScheduler {
 		
 		return sourceComponentsId;
 
+	}
+
+	
+	/* XXX: ---- */
+	private List<AugmentedExecutorDetails> retrieveAllLocalExecutor(String topologyId, TopologyDetails topology, 
+			GeneralTopologyContext topologyContext, Cluster cluster){
+	
+		Map<String, SchedulerAssignment> assignments = cluster.getAssignments();
+		if (assignments == null)
+			return null;
+		
+		SchedulerAssignment assignment = assignments.get(topologyId);
+		if (assignment == null)
+			return null;
+		
+		Map<ExecutorDetails, WorkerSlot> executorToSlot = assignment.getExecutorToSlot();
+		if (executorToSlot == null)
+			return null;
+		
+		Map<ExecutorDetails, WorkerSlot> localExecutorToSlot = new HashMap<ExecutorDetails, WorkerSlot>();
+		List<AugmentedExecutorDetails> localExecutors = new ArrayList<AugmentedExecutorDetails>();
+
+		for(ExecutorDetails e : executorToSlot.keySet()){
+			WorkerSlot slot = executorToSlot.get(e);
+			if (slot == null)
+				continue;
+			if (nodeId.equals(slot.getNodeId())){
+				localExecutorToSlot.put(e, slot);
+			}
+		}
+		
+		for(ExecutorDetails e : localExecutorToSlot.keySet()){
+			WorkerSlot slot = localExecutorToSlot.get(e);
+			
+			/* Check if current component is migrating */
+			String componentId = topology.getExecutorToComponent().get(e);
+			List<String> targetComponentsId = getTargetComponentsId(topologyContext, componentId);
+			List<String> sourceComponentsId = getSourceComponentsId(topologyContext, componentId);
+
+			/* Add executor to the list of candidate ones */
+			AugmentedExecutorDetails lExecutor = new AugmentedExecutorDetails(e, componentId);
+			lExecutor.setWorkerSlot(slot);
+			lExecutor.setTargetComponentsId(targetComponentsId);
+			lExecutor.setSourceComponentsId(sourceComponentsId);
+		
+			localExecutors.add(lExecutor);
+		}
+
+		return localExecutors;
+		
+	}
+	
+	private void computeStatistics(List<AugmentedExecutorDetails> augmentedExecutorsList, 
+			String topologyId, TopologyDetails topology, GeneralTopologyContext topologyContext,
+			Cluster cluster, Map<String, Node> networkSpaceNodes) {
+	
+		
+		Space es = SpaceFactory.createSpace();		
+	
+		SchedulerAssignment assignment = cluster.getAssignmentById(topologyId);
+
+		for(AugmentedExecutorDetails augmentedExecutors : augmentedExecutorsList){
+			List<String> childComponents = augmentedExecutors
+					.getTargetComponentsId();
+			List<RelatedComponentDetails> childComponentsDetails = getRelatedComponentsDetails(
+					networkSpaceNodes, topology, topologyContext, assignment,
+					childComponents, Type.CHILD);
+
+			/* 2. Compute exchanged data rates */
+			Map<String, Double> destinationDataRates = new HashMap<String, Double>();
+
+			List<Integer> localTask = getTasksFromExecutor(augmentedExecutors.getExecutor());
+
+			destinationDataRates = getWorkerNodeDatarate(topologyId, localTask, true, childComponentsDetails);
+
+			for (RelatedComponentDetails relatedComponent : childComponentsDetails) {
+				for (WorkerSlot slot : relatedComponent.getWorkerSlots()) {
+
+					if (slot == null)
+						continue;
+
+					String otherNodeId = slot.getNodeId();
+
+					if (supervisor.getSupervisorId() == null || supervisor.getSupervisorId().equals(otherNodeId)) {
+						/* the other component is on the same node */
+						continue;
+					}
+
+					Node otherNode = relatedComponent.getNetworkSpaceCoordinates().get(otherNodeId);
+					if (otherNode == null)
+						continue;
+
+					Double datarate = destinationDataRates.get(otherNodeId);
+					if (datarate == null)
+						datarate = new Double(0.0);
+
+					double lat = es.distance(otherNode.getCoordinates(), networkSpaceManager.getCoordinates()); //  * datarate;
+
+					double cpuusage = 0;
+					if (networkSpaceManager.usingExtendedSpace()){
+						try{
+							cpuusage = SystemStatusReader.cpuUsage(SystemStatusReader.AVERAGE);
+						}catch(Exception e){}
+					}
+
+					Socket clientSocket;
+					try {
+						clientSocket = new Socket(XXX_STATSERVER_HOSTNAME, XXX_STATSERVER_PORT);
+						Gson gson = new Gson();
+					    
+						DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
+						DataInputStream ins = new DataInputStream(clientSocket.getInputStream());
+						
+						/* Step 1 - send request message */
+						out.writeByte(1);
+						out.flush();
+
+						/* Step 2 - send my informations (useful to let server compute RTT) */
+						DataRateReport message = new DataRateReport(round, supervisor.getSupervisorId(), otherNodeId, topologyId, datarate, lat, cpuusage);
+						out.writeUTF(gson.toJson(message));
+						out.flush();
+						
+						/* Cleanup resources */
+						ins.close();
+						out.close();
+						clientSocket.close();
+					    
+					} catch (UnknownHostException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+			
+			if (JUST_WATCH){
+				unsetMigration(topologyId, augmentedExecutors.getComponentId());
+			}
+			
+		}
+		
+	}
+	
+	private void saveUtilizationOnFile(){
+		BufferedWriter bfile = null;
+		PrintWriter outputFile = null; 
+		double cpuusage = 0;
+
+		try {
+			bfile = new BufferedWriter(new FileWriter("log_" + supervisor.getSupervisorId() + ".txt", true));
+			outputFile = new PrintWriter(bfile);
+
+			try{ cpuusage = SystemStatusReader.cpuUsage(SystemStatusReader.AVERAGE); }catch(Exception e){}
+			
+			String message = System.currentTimeMillis() + ", " + cpuusage + ", " + networkSpaceManager.usingExtendedSpace();
+			System.out.println("-- " + message + " -- ");
+			
+			outputFile.write(message);
+			outputFile.flush();
+			
+		} catch (IOException e) { e.printStackTrace(); }
+		try { if (bfile != null) {	bfile.close(); }
+			  if (outputFile != null) { outputFile.close(); }		
+		} catch (IOException e) { e.printStackTrace(); }
+	
+	}
+	
+	private void notifyNewAssignments(String topologyId, 
+			List<ExecutorDetails> executorsToReassign, WorkerSlot candidateSlot, 
+			List<ExecutorDetails> executorsToConfirm, WorkerSlot currentExecutorWorkerSlot){
+		
+		Socket clientSocket;
+		try {
+			clientSocket = new Socket(XXX_STATSERVER_HOSTNAME, XXX_STATSERVER_PORT);
+			Gson gson = new Gson();
+		    
+			DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
+			DataInputStream ins = new DataInputStream(clientSocket.getInputStream());
+			
+			/* Step 1 - send request message */
+			out.writeByte(2);
+			out.flush();
+
+			/* Step 2 - send my informations (useful to let server compute RTT) */
+			NewAssignmentReport message = new NewAssignmentReport(round, topologyId, executorsToReassign.toString(), 
+					candidateSlot.getNodeId() + ", " + candidateSlot.getPort(), 
+					executorsToConfirm.toString(), 
+					currentExecutorWorkerSlot.getNodeId() + ", " + currentExecutorWorkerSlot.getPort());
+			out.writeUTF(gson.toJson(message));
+			out.flush();
+			
+			/* Cleanup resources */
+			ins.close();
+			out.close();
+			clientSocket.close();
+		    
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+				
 	}
 
 }
