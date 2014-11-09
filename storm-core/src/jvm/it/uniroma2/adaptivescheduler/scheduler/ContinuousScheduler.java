@@ -418,10 +418,8 @@ public class ContinuousScheduler {
 
 		List<Integer> localTask = getTasksFromExecutor(augmentedExecutors.getExecutor());
 		
-		for(Integer task : localTask){
-			destinationDataRates = getWorkerNodeDatarate(topologyId, task, true, childComponentsDetails);
-			sourceDataRates = getWorkerNodeDatarate(topologyId, task, false, parentComponentsDetails);
-		}
+		destinationDataRates = getWorkerNodeDatarate(topologyId, localTask, true, childComponentsDetails);
+		sourceDataRates = getWorkerNodeDatarate(topologyId, localTask, false, parentComponentsDetails);
 		
 		
 		/* 3. compute spring force and the new executor position */
@@ -854,7 +852,7 @@ public class ContinuousScheduler {
 	/*
 	 * source indicates if task is the source
 	 */
-	private Map<String, Double> getWorkerNodeDatarate(String topologyId, Integer task, boolean source, List<RelatedComponentDetails> relatedComponents){
+	private Map<String, Double> getWorkerNodeDatarate(String topologyId, List<Integer> localTask, boolean source, List<RelatedComponentDetails> relatedComponents){
 		
 		Map<String, Double> workerNodeDataRates = new HashMap<String, Double>();
 
@@ -862,28 +860,30 @@ public class ContinuousScheduler {
 			
 			List<Integer> destinationTasks = relatedComponent.getTask();
 			double avgDataratePerSingleWorkerSlot = 0.0;
-			
-			for (Integer otherTask : destinationTasks){
-				
-				try {
-					List<Measurement> measurements = null;
+		
+			for (Integer task : localTask){
+				for (Integer otherTask : destinationTasks){
 					
-					if (source){
-						measurements = databaseManager.getMeasurements(task.toString(), otherTask.toString(), topologyId);
-					}else{
-						measurements = databaseManager.getMeasurements(otherTask.toString(), task.toString(), topologyId);
+					try {
+						List<Measurement> measurements = null;
+						
+						if (source){
+							measurements = databaseManager.getMeasurements(task.toString(), otherTask.toString(), topologyId);
+						}else{
+							measurements = databaseManager.getMeasurements(otherTask.toString(), task.toString(), topologyId);
+						}
+						
+						/* There must be just a single measurement for each pair (taskFrom, taskTo) on current node */
+						if (measurements != null && measurements.size() > 0){
+							avgDataratePerSingleWorkerSlot += measurements.get(0).getValue();
+						}
+					} catch (SQLException e) {
+						e.printStackTrace();
+					} catch (DatabaseException e) {
+						e.printStackTrace();
 					}
 					
-					/* There must be just a single measurement for each pair (taskFrom, taskTo) on current node */
-					if (measurements != null && measurements.size() > 0){
-						avgDataratePerSingleWorkerSlot += measurements.get(0).getValue();
-					}
-				} catch (SQLException e) {
-					e.printStackTrace();
-				} catch (DatabaseException e) {
-					e.printStackTrace();
 				}
-				
 			}
 			
 			if (relatedComponent.getWorkerSlots() != null && relatedComponent.getWorkerSlots().size() > 0){
