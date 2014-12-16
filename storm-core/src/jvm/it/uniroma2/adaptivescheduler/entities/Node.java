@@ -1,7 +1,7 @@
-package it.uniroma2.adaptivescheduler.networkspace;
+package it.uniroma2.adaptivescheduler.entities;
 
 import backtype.storm.scheduler.SupervisorDetails;
-import it.uniroma2.adaptivescheduler.common.Point;
+import it.uniroma2.adaptivescheduler.space.Point;
 
 public class Node {
 	

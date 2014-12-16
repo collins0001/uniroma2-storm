@@ -1,4 +1,4 @@
-package it.uniroma2.adaptivescheduler.common;
+package it.uniroma2.adaptivescheduler.space;
 
 public class LatencyUtilizationSpace implements Space {
 

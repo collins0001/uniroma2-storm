@@ -1,8 +1,6 @@
-package it.uniroma2.adaptivescheduler.networkspace;
+package it.uniroma2.adaptivescheduler.space;
 
-import it.uniroma2.adaptivescheduler.common.LatencyUtilizationSpace;
-import it.uniroma2.adaptivescheduler.common.Point;
-import it.uniroma2.adaptivescheduler.common.Space;
+import it.uniroma2.adaptivescheduler.entities.Node;
 
 import java.util.ArrayList;
 import java.util.List;

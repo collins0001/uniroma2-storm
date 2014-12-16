@@ -1,11 +1,10 @@
-package it.uniroma2.adaptivescheduler.networkspace;
+package it.uniroma2.adaptivescheduler.vivaldi;
 
-import it.uniroma2.adaptivescheduler.common.Point;
-import it.uniroma2.adaptivescheduler.common.Serializer;
-import it.uniroma2.adaptivescheduler.common.Space;
-import it.uniroma2.adaptivescheduler.common.SpaceFactory;
-import it.uniroma2.adaptivescheduler.networkspace.internal.CoordinateExchangeMessage;
-import it.uniroma2.adaptivescheduler.networkspace.internal.NetworkSpaceServer;
+import it.uniroma2.adaptivescheduler.entities.Node;
+import it.uniroma2.adaptivescheduler.space.Point;
+import it.uniroma2.adaptivescheduler.space.Serializer;
+import it.uniroma2.adaptivescheduler.space.Space;
+import it.uniroma2.adaptivescheduler.space.SpaceFactory;
 import it.uniroma2.adaptivescheduler.utils.SystemStatusReader;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 

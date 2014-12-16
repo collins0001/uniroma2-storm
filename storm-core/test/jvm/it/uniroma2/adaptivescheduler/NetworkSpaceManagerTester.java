@@ -1,6 +1,6 @@
 package it.uniroma2.adaptivescheduler;
 
-import it.uniroma2.adaptivescheduler.networkspace.NetworkSpaceManager;
+import it.uniroma2.adaptivescheduler.vivaldi.NetworkSpaceManager;
 
 import java.util.ArrayList;
 import java.util.List;

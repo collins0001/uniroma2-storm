@@ -1,6 +1,6 @@
 package it.uniroma2.adaptivescheduler.scheduler.internal;
 
-import it.uniroma2.adaptivescheduler.networkspace.Node;
+import it.uniroma2.adaptivescheduler.entities.Node;
 
 import java.util.List;
 import java.util.Map;

@@ -1,9 +1,9 @@
 package it.uniroma2.adaptivescheduler;
 
-import it.uniroma2.adaptivescheduler.common.SpaceFactory;
-import it.uniroma2.adaptivescheduler.networkspace.NetworkSpaceManager;
 import it.uniroma2.adaptivescheduler.persistence.DatabaseManager;
 import it.uniroma2.adaptivescheduler.scheduler.ContinuousScheduler;
+import it.uniroma2.adaptivescheduler.space.SpaceFactory;
+import it.uniroma2.adaptivescheduler.vivaldi.NetworkSpaceManager;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 
 import java.io.IOException;

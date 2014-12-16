@@ -1,18 +1,18 @@
 package it.uniroma2.adaptivescheduler.scheduler;
 
-import it.uniroma2.adaptivescheduler.common.Point;
-import it.uniroma2.adaptivescheduler.common.Space;
-import it.uniroma2.adaptivescheduler.networkspace.KNNItem;
-import it.uniroma2.adaptivescheduler.networkspace.KNearestNodes;
-import it.uniroma2.adaptivescheduler.networkspace.NetworkSpaceManager;
-import it.uniroma2.adaptivescheduler.networkspace.Node;
-import it.uniroma2.adaptivescheduler.networkspace.SimpleKNearestNodes;
+import it.uniroma2.adaptivescheduler.entities.Node;
 import it.uniroma2.adaptivescheduler.persistence.DatabaseException;
 import it.uniroma2.adaptivescheduler.persistence.DatabaseManager;
 import it.uniroma2.adaptivescheduler.persistence.entities.Measurement;
 import it.uniroma2.adaptivescheduler.scheduler.internal.AugmentedExecutorDetails;
 import it.uniroma2.adaptivescheduler.scheduler.internal.RelatedComponentDetails;
 import it.uniroma2.adaptivescheduler.scheduler.internal.RelatedComponentDetails.Type;
+import it.uniroma2.adaptivescheduler.space.KNNItem;
+import it.uniroma2.adaptivescheduler.space.KNearestNodes;
+import it.uniroma2.adaptivescheduler.space.Point;
+import it.uniroma2.adaptivescheduler.space.SimpleKNearestNodes;
+import it.uniroma2.adaptivescheduler.space.Space;
+import it.uniroma2.adaptivescheduler.vivaldi.NetworkSpaceManager;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 
 import java.sql.SQLException;
@@ -1060,7 +1060,8 @@ public class ContinuousScheduler {
 		}
 	}
 
-	
+	/* XXX: we should save the inode indicating {component, worker node id}, to guarantee no to "starve" if 
+	 * a worker node fails and an executor needs to be moved */
 	private void setMigration(String stormId, String componentId){
 
 		String dirname = ZK_MIGRATION_DIR + "/" + stormId + "/" + componentId;

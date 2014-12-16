@@ -1,8 +1,7 @@
-package it.uniroma2.adaptivescheduler.networkspace.internal;
+package it.uniroma2.adaptivescheduler.vivaldi;
 
-import it.uniroma2.adaptivescheduler.common.Point;
-import it.uniroma2.adaptivescheduler.networkspace.NetworkSpaceManager;
-import it.uniroma2.adaptivescheduler.networkspace.Node;
+import it.uniroma2.adaptivescheduler.entities.Node;
+import it.uniroma2.adaptivescheduler.space.Point;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;

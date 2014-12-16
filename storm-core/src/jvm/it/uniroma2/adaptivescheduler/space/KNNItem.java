@@ -1,4 +1,6 @@
-package it.uniroma2.adaptivescheduler.networkspace;
+package it.uniroma2.adaptivescheduler.space;
+
+import it.uniroma2.adaptivescheduler.entities.Node;
 
 public class KNNItem {
 	

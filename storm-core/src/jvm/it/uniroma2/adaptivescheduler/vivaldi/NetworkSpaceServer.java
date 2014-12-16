@@ -1,6 +1,4 @@
-package it.uniroma2.adaptivescheduler.networkspace.internal;
-
-import it.uniroma2.adaptivescheduler.networkspace.NetworkSpaceManager;
+package it.uniroma2.adaptivescheduler.vivaldi;
 
 import java.io.IOException;
 import java.net.ServerSocket;

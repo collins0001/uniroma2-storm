@@ -1,14 +1,14 @@
 package it.uniroma2.adaptivescheduler.scheduler;
 
-import it.uniroma2.adaptivescheduler.common.Point;
-import it.uniroma2.adaptivescheduler.common.Serializer;
-import it.uniroma2.adaptivescheduler.common.Space;
-import it.uniroma2.adaptivescheduler.common.SpaceFactory;
-import it.uniroma2.adaptivescheduler.networkspace.KNNItem;
-import it.uniroma2.adaptivescheduler.networkspace.KNearestNodes;
-import it.uniroma2.adaptivescheduler.networkspace.Node;
-import it.uniroma2.adaptivescheduler.networkspace.SimpleKNearestNodes;
+import it.uniroma2.adaptivescheduler.entities.Node;
 import it.uniroma2.adaptivescheduler.scheduler.internal.ExecutorPool;
+import it.uniroma2.adaptivescheduler.space.KNNItem;
+import it.uniroma2.adaptivescheduler.space.KNearestNodes;
+import it.uniroma2.adaptivescheduler.space.Point;
+import it.uniroma2.adaptivescheduler.space.Serializer;
+import it.uniroma2.adaptivescheduler.space.SimpleKNearestNodes;
+import it.uniroma2.adaptivescheduler.space.Space;
+import it.uniroma2.adaptivescheduler.space.SpaceFactory;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 
 import java.io.IOException;
@@ -1025,6 +1025,7 @@ public class InitialScheduler implements IScheduler{
 		return coordinates;
 	}
 	
+	/* XXX: we should delete the migration inode on zookeeper if the worker node has failed */
 	private boolean isMigrating(String topologyId){
 		String dirname = ZK_MIGRATION_DIR + "/" + topologyId;
 		

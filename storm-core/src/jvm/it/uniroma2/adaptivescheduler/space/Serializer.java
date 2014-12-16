@@ -1,6 +1,6 @@
-package it.uniroma2.adaptivescheduler.common;
+package it.uniroma2.adaptivescheduler.space;
 
-import it.uniroma2.adaptivescheduler.networkspace.Node;
+import it.uniroma2.adaptivescheduler.entities.Node;
 
 public class Serializer {
 	private static final String SEP_COORDINATES_DIMENSIONS = ";";

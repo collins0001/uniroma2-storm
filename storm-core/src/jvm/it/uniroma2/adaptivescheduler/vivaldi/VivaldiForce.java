@@ -1,8 +1,8 @@
-package it.uniroma2.adaptivescheduler.networkspace;
+package it.uniroma2.adaptivescheduler.vivaldi;
 
-import it.uniroma2.adaptivescheduler.common.Point;
-import it.uniroma2.adaptivescheduler.common.Space;
-import it.uniroma2.adaptivescheduler.common.SpaceFactory;
+import it.uniroma2.adaptivescheduler.space.Point;
+import it.uniroma2.adaptivescheduler.space.Space;
+import it.uniroma2.adaptivescheduler.space.SpaceFactory;
 
 import java.util.Random;
 
