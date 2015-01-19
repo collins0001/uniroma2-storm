@@ -55,7 +55,7 @@ import com.google.gson.Gson;
 public class ContinuousScheduler {
 
 	/* XXX: */
-	private static final String XXX_STATSERVER_HOSTNAME = "160.80.97.159";
+	private static final String XXX_STATSERVER_HOSTNAME = "160.80.97.155";
 	private static final int XXX_STATSERVER_PORT = 9027;
 	/* XXX: */
 	

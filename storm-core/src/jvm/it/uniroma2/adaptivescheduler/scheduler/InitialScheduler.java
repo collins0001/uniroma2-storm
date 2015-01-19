@@ -440,11 +440,19 @@ public class InitialScheduler implements IScheduler{
 			List<WorkerSlot> availableSlots, Cluster cluster, Map<String, Node> knownNetworkSpaceNodes){
 		
 		boolean updated = true;
-		
 		while(updated){
 			updated = false;
 			
 			List<WorkerSlot> availableSlotPerRound = new ArrayList<WorkerSlot>(availableSlots);
+			
+			Iterator<WorkerSlot> it = availableSlotPerRound.iterator();
+			while(it.hasNext()){
+				WorkerSlot ws = it.next();
+				if (cluster.isSlotOccupied(ws)){
+					System.out.println("++ Removing occupied slot " + ws);
+					it.remove();
+				}
+			}
 			
 			System.out.println("Available Slot per round: " + availableSlotPerRound.size());
 			System.out.println("Executor pools: " + executorPools.size());
