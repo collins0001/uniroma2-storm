@@ -28,7 +28,7 @@ public class SimpleKNearestNodes implements KNearestNodes{
 		k = Math.min(k, maxNNodes);
 
 		boolean mixedSpace = false;
-		if (space instanceof LatencyUtilizationSpace){
+		if (space instanceof BimodalSpace){
 			mixedSpace = true;
 		}
 		
@@ -40,9 +40,9 @@ public class SimpleKNearestNodes implements KNearestNodes{
 			for (Node n : nodes.values()){
 				double dist = Double.MAX_VALUE; 
 				
-				if (mixedSpace)
-					dist = ((LatencyUtilizationSpace) space).distance(position, n.getCoordinates(), true);
-				else
+				if (mixedSpace){
+					dist = ((BimodalSpace) space).distance(position, n.getCoordinates(), true);
+				}else
 					dist = space.distance(position, n.getCoordinates());
 
 				if (dist < currentMinDistance && !blacklist.contains(n.getSupervisorId())){

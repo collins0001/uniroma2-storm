@@ -1,13 +1,23 @@
 package it.uniroma2.adaptivescheduler.space;
 
-public class LatencyUtilizationSpace implements Space {
+public class LatencyPlusOneSpace implements BimodalSpace{
 
 	private static int latencyDimensions = 2;
 	private static int dimensions = 3;
 	
-	public LatencyUtilizationSpace() {
-	}
+	private static double[] weights = {1,1,1};
 	
+
+	public LatencyPlusOneSpace() {
+	}
+
+	public static double[] getWeights() {
+		return weights;
+	}
+	public static void setWeights(double[] weights) {
+		LatencyPlusOneSpace.weights = weights;
+	}
+
 	@Override
 	public Point difference(Point a, Point b) {
 		
@@ -107,7 +117,7 @@ public class LatencyUtilizationSpace implements Space {
 		int dim = Math.min(a.getDimensionality(), dimensions);
 		
 		for (int i = 0; i < dim; i++)
-			squareSum += Math.pow((a.get(i) - b.get(i)), 2.0);
+			squareSum += Math.pow(weights[i] * (a.get(i) - b.get(i)), 2.0);
 		
 		squareSum = Math.sqrt(squareSum);
 				

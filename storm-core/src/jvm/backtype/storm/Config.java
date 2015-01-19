@@ -1015,6 +1015,26 @@ public class Config extends HashMap<String, Object> {
      */
     public static final String ADAPTIVE_SCHEDULER_JUST_MONITOR = "adaptivescheduler.just_monitor";
     public static final Object ADAPTIVE_SCHEDULER_JUST_MONITOR_SCHEMA = Boolean.class;
+
+    
+    /**
+     * Multidimensional space parameters. 
+     */
+    public static final String ADAPTIVE_SCHEDULER_SPACE_MAX_LATENCY = "adaptivescheduler.space.latency.max";
+    public static final Object ADAPTIVE_SCHEDULER_SPACE_MAX_LATENCY_SCHEMA = Double.class;
+    
+    public static final String ADAPTIVE_SCHEDULER_SPACE_W1 = "adaptivescheduler.space.weight.1";
+    public static final Object ADAPTIVE_SCHEDULER_SPACE_W1_SCHEMA = Double.class;
+    
+    public static final String ADAPTIVE_SCHEDULER_SPACE_W2 = "adaptivescheduler.space.weight.2";
+    public static final Object ADAPTIVE_SCHEDULER_SPACE_W2_SCHEMA = Double.class;
+
+    public static final String ADAPTIVE_SCHEDULER_SPACE_W3 = "adaptivescheduler.space.weight.3";
+    public static final Object ADAPTIVE_SCHEDULER_SPACE_W3_SCHEMA = Double.class;
+
+    public static final String ADAPTIVE_SCHEDULER_SPACE_RELIABILITY = "adaptivescheduler.space.reliability";
+    public static final Object ADAPTIVE_SCHEDULER_SPACE_RELIABILITY_SCHEMA = Double.class;
+
     
     
     /*

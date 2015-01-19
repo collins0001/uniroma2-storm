@@ -10,7 +10,7 @@ public class SpaceFactory {
 		
 	public static Space createSpace(){
 		if (useLatencyUtilizationSpace){
-			return new LatencyUtilizationSpace();
+			return new LatencyPlusOneSpace();
 		}
 		return new EuclidianSpace();
 	}

@@ -9,6 +9,7 @@ import it.uniroma2.adaptivescheduler.scheduler.internal.RelatedComponentDetails;
 import it.uniroma2.adaptivescheduler.scheduler.internal.RelatedComponentDetails.Type;
 import it.uniroma2.adaptivescheduler.space.KNNItem;
 import it.uniroma2.adaptivescheduler.space.KNearestNodes;
+import it.uniroma2.adaptivescheduler.space.LatencyPlusOneSpace;
 import it.uniroma2.adaptivescheduler.space.Point;
 import it.uniroma2.adaptivescheduler.space.SimpleKNearestNodes;
 import it.uniroma2.adaptivescheduler.space.Space;
@@ -18,6 +19,7 @@ import it.uniroma2.adaptivescheduler.vivaldi.NetworkSpaceManager;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 import it.uniroma2.statserver.messages.DataRateReport;
 import it.uniroma2.statserver.messages.NewAssignmentReport;
+import it.uniroma2.statserver.messages.TopologyEntityReport;
 
 import java.io.BufferedWriter;
 import java.io.DataInputStream;
@@ -57,6 +59,10 @@ public class ContinuousScheduler {
 	/* XXX: */
 	private static final String XXX_STATSERVER_HOSTNAME = "160.80.97.155";
 	private static final int XXX_STATSERVER_PORT = 9027;
+	private static final int XXX_STATSERVER_CODE_DATARATE = 1;
+	private static final int XXX_STATSERVER_CODE_NEWASSIGNMENT = 2;
+	private static final int XXX_STATSERVER_CODE_TOPOLOGY_INFO = 3;
+
 	/* XXX: */
 	
 	
@@ -95,8 +101,10 @@ public class ContinuousScheduler {
 		this.networkSpaceManager = networkSpaceManager;
 		cooldownBuffer = new HashMap<String, Integer>();
 		localTopologyComponentMigrations = new ArrayList<String>();
-		if (config != null)
+		if (config != null){
 			readConfig(config);
+			setCostSpaceParameters(config);
+		}
 	}
 	
 	@SuppressWarnings("rawtypes") 
@@ -134,8 +142,7 @@ public class ContinuousScheduler {
 				System.out.println("Max executor per slot: " + MAX_EXECUTOR_PER_SLOT);
 			}
 			
-			
-			
+
 			// XXX:
 			Boolean bValue = (Boolean) config.get(Config.ADAPTIVE_SCHEDULER_JUST_MONITOR);
 			if (bValue != null){
@@ -147,6 +154,45 @@ public class ContinuousScheduler {
 		
 	}
 	
+	
+	@SuppressWarnings("rawtypes")
+	private void setCostSpaceParameters(Map config){
+		
+		double latency1 = 1;
+		double w1 = 1;
+		double w2 = 1;
+		double w3 = 0;
+
+		
+		Double dValue = (Double) config.get(Config.ADAPTIVE_SCHEDULER_SPACE_MAX_LATENCY);
+		if (dValue != null){
+			if (dValue.doubleValue() == 0.0)
+				dValue = new Double(1.0);
+			
+			latency1 = 1.0 / dValue.doubleValue();
+		}
+
+		dValue = (Double) config.get(Config.ADAPTIVE_SCHEDULER_SPACE_W1);
+		if (dValue != null){
+			w1 = dValue.doubleValue();
+		}
+		dValue = (Double) config.get(Config.ADAPTIVE_SCHEDULER_SPACE_W2);
+		if (dValue != null){
+			w2 = dValue.doubleValue();
+		}
+		dValue = (Double) config.get(Config.ADAPTIVE_SCHEDULER_SPACE_W3);
+		if (dValue != null){
+			w3 = dValue.doubleValue();
+		}
+
+		Space s = SpaceFactory.createSpace();
+		if (s instanceof LatencyPlusOneSpace){
+			System.out.println("Updating Space Normalization Factor(s): [2+1] " + w1 * latency1 + ", " + w2 * latency1 + ", " + w3);
+			
+			LatencyPlusOneSpace.setWeights(new double[]{w1 * latency1, w2 * latency1, w3});
+		}
+
+	}
 	
 	/**
 	 * Initialize Scheduler
@@ -1241,6 +1287,7 @@ public class ContinuousScheduler {
 
 			destinationDataRates = getWorkerNodeDatarate(topologyId, localTask, true, childComponentsDetails);
 
+			/* Send pair of node related statistics: datarate, latency */
 			for (RelatedComponentDetails relatedComponent : childComponentsDetails) {
 				for (WorkerSlot slot : relatedComponent.getWorkerSlots()) {
 
@@ -1264,13 +1311,6 @@ public class ContinuousScheduler {
 
 					double lat = es.distance(otherNode.getCoordinates(), networkSpaceManager.getCoordinates()); //  * datarate;
 
-					double cpuusage = 0;
-					if (networkSpaceManager.usingExtendedSpace()){
-						try{
-							cpuusage = SystemStatusReader.cpuUsage(SystemStatusReader.AVERAGE);
-						}catch(Exception e){}
-					}
-
 					Socket clientSocket;
 					try {
 						clientSocket = new Socket(XXX_STATSERVER_HOSTNAME, XXX_STATSERVER_PORT);
@@ -1280,11 +1320,11 @@ public class ContinuousScheduler {
 						DataInputStream ins = new DataInputStream(clientSocket.getInputStream());
 						
 						/* Step 1 - send request message */
-						out.writeByte(1);
+						out.writeByte(XXX_STATSERVER_CODE_DATARATE);
 						out.flush();
 
 						/* Step 2 - send my informations (useful to let server compute RTT) */
-						DataRateReport message = new DataRateReport(round, supervisor.getSupervisorId(), otherNodeId, topologyId, datarate, lat, cpuusage);
+						DataRateReport message = new DataRateReport(round, supervisor.getSupervisorId(), otherNodeId, topologyId, datarate, lat);
 						out.writeUTF(gson.toJson(message));
 						out.flush();
 						
@@ -1301,6 +1341,57 @@ public class ContinuousScheduler {
 				}
 			}
 			
+			/* Send node-related statistics: reliability, utilization */
+			double reliability = 0;
+			double cpuusage = 0;
+			
+			if (!augmentedExecutors.getComponentId().startsWith("__")){
+				if (networkSpaceManager.getSpace() instanceof LatencyPlusOneSpace){
+					
+					String componentTaskId = augmentedExecutors.getComponentId();
+					componentTaskId += "-" +augmentedExecutors.getExecutor().getStartTask() + ":" + augmentedExecutors.getExecutor().getEndTask();
+					
+					reliability = Double.MAX_VALUE;
+					int reliabilityIndex = networkSpaceManager.getSpace().getLatencyDimensions();
+					double rFactor = networkSpaceManager.getCoordinates().get(reliabilityIndex);
+
+					if (reliability > 0){
+						/* reliability = 1 - rFactor */
+						reliability = Math.log(1 - rFactor);
+					}
+					
+					try{ cpuusage = SystemStatusReader.cpuUsage(SystemStatusReader.AVERAGE); }catch(Exception e){}
+
+					Socket clientSocket;
+					try {
+						clientSocket = new Socket(XXX_STATSERVER_HOSTNAME, XXX_STATSERVER_PORT);
+						Gson gson = new Gson();
+					    
+						DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
+						DataInputStream ins = new DataInputStream(clientSocket.getInputStream());
+						
+						/* Step 1 - send request message */
+						out.writeByte(XXX_STATSERVER_CODE_TOPOLOGY_INFO);
+						out.flush();
+
+						/* Step 2 - send my informations (useful to let server compute RTT) */
+						TopologyEntityReport message = new TopologyEntityReport(round, supervisor.getSupervisorId(), topologyId, componentTaskId, reliability, cpuusage);
+						out.writeUTF(gson.toJson(message));
+						out.flush();
+						
+						/* Cleanup resources */
+						ins.close();
+						out.close();
+						clientSocket.close();
+					    
+					} catch (UnknownHostException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}	
+			}
+
 			if (JUST_WATCH){
 				unsetMigration(topologyId, augmentedExecutors.getComponentId());
 			}
@@ -1346,7 +1437,7 @@ public class ContinuousScheduler {
 			DataInputStream ins = new DataInputStream(clientSocket.getInputStream());
 			
 			/* Step 1 - send request message */
-			out.writeByte(2);
+			out.writeByte(XXX_STATSERVER_CODE_NEWASSIGNMENT);
 			out.flush();
 
 			/* Step 2 - send my informations (useful to let server compute RTT) */

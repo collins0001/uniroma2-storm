@@ -34,14 +34,14 @@ public class VivaldiForce {
 			/* two points are in the same location */
 			Random rnd = new Random();
 
-			for (int i = 0; i < a.getDimensionality(); i++) {
+			for (int i = 0; i < space.getLatencyDimensions(); i++) {
 				versor[i] = rnd.nextDouble();
 				sum += Math.abs(versor[i]);
 			}
 		}
 
 		/* Set value only for latency dimensions */
-		for (int i = 0; i < a.getDimensionality(); i++) {
+		for (int i = 0; i < space.getLatencyDimensions(); i++) {
 			versor[i] = versor[i] / sum;
 		}
 		for (int i = space.getLatencyDimensions(); i < space.getTotalDimensions(); i++) {

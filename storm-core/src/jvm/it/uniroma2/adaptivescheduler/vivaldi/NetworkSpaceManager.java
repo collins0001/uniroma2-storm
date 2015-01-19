@@ -5,11 +5,15 @@ import it.uniroma2.adaptivescheduler.space.Point;
 import it.uniroma2.adaptivescheduler.space.Serializer;
 import it.uniroma2.adaptivescheduler.space.Space;
 import it.uniroma2.adaptivescheduler.space.SpaceFactory;
-import it.uniroma2.adaptivescheduler.utils.SystemStatusReader;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -43,6 +47,7 @@ public class NetworkSpaceManager {
 	private static boolean EXTENDED_SPACE = false;
 	
 	private static final boolean NS_DEBUG = false;
+	private static final String RELIABILITY_FILE = "reliability";
 	
 	/* Const */
 	private static final String ZK_COORDINATES_DIR = "/extension/networkspace/coordinates";
@@ -83,14 +88,17 @@ public class NetworkSpaceManager {
 
 	private int roundFromLastPublication;
 	
+	private Map<String, Object> config;
 
 	public NetworkSpaceManager(String id) {
 		this(id, null, null);
 	}
 	
-	@SuppressWarnings("rawtypes") 
+	@SuppressWarnings({ "rawtypes", "unchecked" }) 
 	public NetworkSpaceManager(String id, SimpleZookeeperClient zooKeeperClient, Map config) {
 	
+		this.config = (Map<String, Object>) config;
+		
 		networkSpace = SpaceFactory.createSpace();
 		
 		coordinates = new Point(networkSpace.getTotalDimensions());
@@ -113,8 +121,11 @@ public class NetworkSpaceManager {
 
 		rnd = new Random();
 
-		if (config != null)
+		if (config != null){
 			readConfig(config);
+			initializeSpaceDimensions(config);
+			
+		}
 		
 		server = new NetworkSpaceServer(SERVER_PORT, this);
 		serverThread = new Thread(server);
@@ -164,7 +175,62 @@ public class NetworkSpaceManager {
 			}
 
 		}
+	}
+	
+	@SuppressWarnings("rawtypes")
+	private void initializeSpaceDimensions(Map config){
 		
+		Boolean useExtendedSpace = (Boolean) config.get(Config.ADAPTIVE_SCHEDULER_USE_EXTENDED_SPACE);
+		if (useExtendedSpace == null){
+			return;
+		}
+		
+		Double reliability = (Double) config.get(Config.ADAPTIVE_SCHEDULER_SPACE_RELIABILITY);
+		if (reliability != null){
+			double reliabilityValue = reliability.doubleValue();
+			
+			if (reliabilityValue > 100)
+				reliabilityValue = 100;
+			
+			File f = new File(RELIABILITY_FILE);
+			BufferedWriter buffer;
+			try {
+				buffer = new BufferedWriter(new FileWriter(f));
+				buffer.write("" + reliabilityValue);
+				buffer.close();		
+				System.out.println("Reliability value (" + reliabilityValue + "%) written on file");
+			} catch (IOException e) { }
+		}
+	}
+	
+	private double getNodeReliability(){
+		
+		double reliability = 1;
+		
+		File f = new File(RELIABILITY_FILE);
+		BufferedReader buffer;
+		try {
+			buffer = new BufferedReader(new FileReader(f));
+			String read = buffer.readLine();
+			if (read != null){
+				reliability = Double.parseDouble(read) / 100.0;
+				buffer.close();					
+			} else {
+				Double configReliability = (Double) config.get(Config.ADAPTIVE_SCHEDULER_SPACE_RELIABILITY);
+				
+				if (configReliability != null){
+					reliability = configReliability.doubleValue() / 100.0;
+				}
+			}
+		} catch (Exception e) {
+			Double configReliability = (Double) config.get(Config.ADAPTIVE_SCHEDULER_SPACE_RELIABILITY);
+			
+			if (configReliability != null){
+				reliability = configReliability.doubleValue() / 100.0;
+			}
+		}
+		
+		return reliability;
 	}
 	
 	/**
@@ -402,7 +468,7 @@ public class NetworkSpaceManager {
 				/* *** Phase2: Analyze *** */ 
 				VivaldiForce f = new VivaldiForce(sn.getLastMeasuredLatency(), getCoordinates(), sn.getCoordinates());
 				updatePredictionError(sn.getLastMeasuredLatency(), getCoordinates(), sn.getCoordinates(), sn.getPredictionError());
-				/* Avoid to use a sample twice */
+				/* Avoid using a sample twice */
 				sn.setLastMeasuredLatency(-1);
 				
 
@@ -626,14 +692,20 @@ public class NetworkSpaceManager {
 	private void updateOtherDimensions(){
 		
 		if (EXTENDED_SPACE){
-			double cpuusage = 0;
-			try{
-				cpuusage = SystemStatusReader.cpuUsage(SystemStatusReader.AVERAGE);
-			}catch(Exception e){}
 			
-			for(int i = networkSpace.getLatencyDimensions(); i < networkSpace.getTotalDimensions(); i++){
-				coordinates.set(i, cpuusage);
-			}
+			double reliability = getNodeReliability();
+			double rFactor = 1 -  reliability;
+			coordinates.set(networkSpace.getLatencyDimensions(), rFactor);
+			System.out.println("Updated reliability: " + reliability + "(" + rFactor + ")");
+			
+//			double cpuusage = 0;
+//			try{
+//				cpuusage = SystemStatusReader.cpuUsage(SystemStatusReader.AVERAGE);
+//			}catch(Exception e){}
+//			
+//			for(int i = networkSpace.getLatencyDimensions(); i < networkSpace.getTotalDimensions(); i++){
+//				coordinates.set(i, cpuusage);
+//			}
 //			System.out.println("Update usage: " + cpuusage);
 		}
 		
