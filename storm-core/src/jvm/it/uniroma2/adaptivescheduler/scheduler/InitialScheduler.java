@@ -1,6 +1,7 @@
 package it.uniroma2.adaptivescheduler.scheduler;
 
 import it.uniroma2.adaptivescheduler.entities.Node;
+import it.uniroma2.adaptivescheduler.scheduler.internal.AugmentedWorkerSlot;
 import it.uniroma2.adaptivescheduler.scheduler.internal.ExecutorPool;
 import it.uniroma2.adaptivescheduler.space.KNNItem;
 import it.uniroma2.adaptivescheduler.space.KNearestNodes;
@@ -14,6 +15,7 @@ import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -45,6 +47,7 @@ public class InitialScheduler implements IScheduler{
 	private double SPRING_FORCE_DELTA = 0.1;
 	private int K_NEAREST_NODE_TO_RETRIEVE = 7;
 	
+	private boolean NETWORK_AWARE_SCHEDULING = false;
 	
 	private static final boolean DEBUG_RELAXATION_PLACEMENT = false;
 	
@@ -100,6 +103,12 @@ public class InitialScheduler implements IScheduler{
 				System.out.println("Using extended space");
 			}
 
+			Boolean bNetworkAwareScheduling = (Boolean) config.get(Config.ADAPTIVE_SCHEDULER_INITIAL_SCHEDULER_LOCATION_AWARE);
+			if (bNetworkAwareScheduling != null){
+				NETWORK_AWARE_SCHEDULING = bNetworkAwareScheduling.booleanValue();
+				System.out.println("Network aware scheduling: " + NETWORK_AWARE_SCHEDULING);
+			}
+			
 		}
 	}
 	
@@ -144,24 +153,53 @@ public class InitialScheduler implements IScheduler{
 		}
 	}
 	
-
-
-
 	@Override
 	public void schedule(Topologies topologies, Cluster cluster) {
 
-		System.out.println("Executing INITIAL SCHEDULER ");
+		System.out.println(" ");
+		System.out.println(" +----------------------------------------------------------------------------------------------+");
+		System.out.println(" |--         +++++ Initial Scheduler CAN'T be executed without topology context +++++         --|");
+		System.out.println(" |----------------------------------------------------------------------------------------------|");
+		System.out.println(" |-- This scheduler requires you to enable the option \"adaptivescheduler.enabled\":          --|");
+		System.out.println(" |--  .initial_scheduler.location_aware=true  actives the location-aware scheduling policy    --|");
+		System.out.println(" |--  .initial_scheduler.location_aware=false actives a round robin scheduling policy         --|");
+		System.out.println(" +----------------------------------------------------------------------------------------------+");
+		System.out.println(" ");
+		
+    }
+	
+	public void scheduleUsingContext(Topologies topologies, Cluster cluster, Map<String, GeneralTopologyContext> topologiesContext) {
+
+		System.out.println("Executing INITIAL SCHEDULER using Context");
+		
+		if (NETWORK_AWARE_SCHEDULING){
+			networkAwareScheduler(topologies, cluster, topologiesContext);
+		} else {
+			roundRobinScheduler(topologies, cluster, topologiesContext);
+		}
+		
+    }
+	
+	public void roundRobinScheduler(Topologies topologies, Cluster cluster, Map<String, GeneralTopologyContext> topologiesContext) {
+
+		System.out.println("Executing ROUND ROBIN Scheduler (Context used)");
 		
 		List<TopologyDetails> topologiesToSchedule = cluster.needsSchedulingTopologies(topologies);
 		
 		/* Get the list of available slots */
 		List<WorkerSlot> availableSlots = cluster.getAvailableSlots();
-		availableSlots = orderAvailableSlots(availableSlots);
+		availableSlots = orderAvailableSlots(cluster, availableSlots);
 		
 		if (topologiesToSchedule != null){
 			
 			for(TopologyDetails topology : topologiesToSchedule){
-				scheduleTopologyUsingRoundRobin(topology, availableSlots, cluster);
+				String topologyId = topology.getId();
+				if (cluster.needsScheduling(topology)){
+					GeneralTopologyContext topologyContext = topologiesContext.get(topologyId);
+					scheduleSingleTopologyRoundRobin(topology, topologyContext, availableSlots, cluster);
+				} else {
+					System.out.println("Topology " + topologyId + " doesn't need scheduling ");
+				}
 			}
 			
 		} else {
@@ -169,17 +207,15 @@ public class InitialScheduler implements IScheduler{
 		}
     }
 	
+	public void networkAwareScheduler(Topologies topologies, Cluster cluster, Map<String, GeneralTopologyContext> topologiesContext) {
 
-
-	public void scheduleUsingContext(Topologies topologies, Cluster cluster, Map<String, GeneralTopologyContext> topologiesContext) {
-
-		System.out.println("Executing INITIAL SCHEDULER using Context");
+		System.out.println("Executing Initial and NETWORK AWARE Scheduler (Context used)");
 		
 		List<TopologyDetails> topologiesToSchedule = cluster.needsSchedulingTopologies(topologies);
 		
 		/* Get the list of available slots */
 		List<WorkerSlot> availableSlots = cluster.getAvailableSlots();
-		availableSlots = orderAvailableSlots(availableSlots);
+		availableSlots = orderAvailableSlots(cluster, availableSlots);
 		
 		
 		if (topologiesToSchedule != null){
@@ -191,7 +227,7 @@ public class InitialScheduler implements IScheduler{
 				if (cluster.needsScheduling(topology)){
 					System.out.println("Topology " + topologyId + " needs scheduling ");
 					retrieveAllNetworkSpaceNodes(cluster, knownNetworkSpaceNodes);
-					scheduleTopology(topology, topologyContext, availableSlots, cluster, knownNetworkSpaceNodes);
+					scheduleSingleTopologyNetworkAware(topology, topologyContext, availableSlots, cluster, knownNetworkSpaceNodes);
 				} else {
 					System.out.println("Topology " + topologyId + " doesn't need scheduling ");
 				}
@@ -201,6 +237,7 @@ public class InitialScheduler implements IScheduler{
 			System.out.println(" > No scheduling actions needed");
 		}
     }
+	
 	
 	private void retrieveAllNetworkSpaceNodes(Cluster cluster, Map<String, Node> networkSpaceNodes){
 		
@@ -218,43 +255,37 @@ public class InitialScheduler implements IScheduler{
 	}
 	
 	/**
-	 * Order WorkerSlot according to its port. Returned list can be used to spread
+	 * Order WorkerSlot according to its port and hostname. Returned list can be used to spread
 	 * executors in a round robin manner.
 	 * @param workerSlots
 	 * @return
 	 */
-	private List<WorkerSlot> orderAvailableSlots (List<WorkerSlot> workerSlots){
-		
-		Map<Integer, List<WorkerSlot>> map = new HashMap<Integer, List<WorkerSlot>>();
+	private List<WorkerSlot> orderAvailableSlots(Cluster cluster, List<WorkerSlot> workerSlots){
+
+		List<AugmentedWorkerSlot> augmentedWorkerSlots = new ArrayList<AugmentedWorkerSlot>();
+		List<WorkerSlot> sortedList = new ArrayList<WorkerSlot>();
 		
 		for(WorkerSlot ws : workerSlots){
+			String nodeId = ws.getNodeId();
+			SupervisorDetails s = cluster.getSupervisorById(nodeId);
+			String hostname = s.getHost();
 			
-			Integer port = new Integer(ws.getPort());
-			
-			List<WorkerSlot> slots = map.get(port);
-			
-			if (slots == null)
-				slots = new ArrayList<WorkerSlot>();
-			
-			slots.add(ws);
-			map.put(port, slots);
-			
+			AugmentedWorkerSlot aws = new AugmentedWorkerSlot(ws.getPort(), hostname, ws);	
+			augmentedWorkerSlots.add(aws);
 		}
 
-		List <WorkerSlot> orderedList = new ArrayList<WorkerSlot>();
-
-		for (Integer port : map.keySet()){
-			
-			List<WorkerSlot> wss = map.get(port);
-			orderedList.addAll(wss);
-			
+		Collections.sort(augmentedWorkerSlots);
+		
+		for(AugmentedWorkerSlot aws : augmentedWorkerSlots){
+			sortedList.add(aws.getWorkerSlot());
 		}
 		
-		return orderedList;
+		return sortedList;
 	}
 
 
-	private void scheduleTopologyUsingRoundRobin(TopologyDetails topology, List<WorkerSlot> availableSlots, Cluster cluster){
+	private void scheduleSingleTopologyRoundRobin(TopologyDetails topology, 
+				GeneralTopologyContext topologyContext, List<WorkerSlot> availableSlots, Cluster cluster){
 
 		String topologyId = topology.getId();
 		
@@ -268,67 +299,59 @@ public class InitialScheduler implements IScheduler{
 		System.out.println("Available Slots. ");
 		System.out.println(availableSlots);	
 		
-
-		/* List of executor to schedule */
-		Collection<ExecutorDetails> allExecutors = topology.getExecutors();
-		Set<ExecutorDetails> aliveAndAssignedExecutors = new HashSet<ExecutorDetails>();
-		SchedulerAssignment existingAssignment = cluster.getAssignmentById(topologyId);
-		if (existingAssignment != null){
-			aliveAndAssignedExecutors = existingAssignment.getExecutors();
+		/* 1. Calculate executor pools (RR Version)
+		 * 		NOTE: RR version differs from the NA version since it does not use the knownNetworkSpaceNodes 
+		 * 				This is why a null argument is passed to calculateExecutorPools. 
+		 * 				As a consequence, ep.getPosition() will always return null.
+		 */
+		List<ExecutorPool> executorPools = calculateExecutorPools(topologyId, topology, topologyContext, cluster, availableSlots, null);
+		boolean schedulingNeeded = false;
+		for(ExecutorPool ep : executorPools){
+			if (!ep.isAssigned()){
+				schedulingNeeded = true;
+				break;
+			}
 		}
-
-		/* Don't reschedule executors correctly running */
-		Set<ExecutorDetails> executorsToReassign = new HashSet<ExecutorDetails>(allExecutors);
-		executorsToReassign.removeAll(aliveAndAssignedExecutors);
-
-		/* Determine the number of executors per slot */
-		int executors = allExecutors.size();
-		int slotToUse = Math.min(topology.getNumWorkers(), availableSlots.size());
-		int executorsPerSlot = (int) Math.ceil((double) executors / (double) slotToUse);
-
+		if (!schedulingNeeded)
+			return;
+		
+		/* 2. Determinate relations between Executor Pools */
+		System.out.println("Determinate relations between Executor Pools");
+		determineRelationsBetweenExecutorPools(executorPools, topologyContext);
+		
+		/* 3. Determinate pinned Executor Pools */
+		System.out.println("Determinate pinned Executor Pools");
+		determinePinnedExecutorPools(executorPools);
+		
 		/* DEBUG */
-		System.out.println("Executors: " + executors);
-		System.out.println("Executors to reassing: " + executorsToReassign.size());
-		System.out.println("Slot To Use: " + slotToUse);
-		System.out.println("Executors per Slot: " + executorsPerSlot);
-		
-		
-		Iterator<ExecutorDetails> executorsIt = executorsToReassign.iterator();
-		for (int i = 0; i < slotToUse; i++){
-		
-			int k = 0;
-			Set<ExecutorDetails> executorsGroup = new HashSet<ExecutorDetails>();
-			
-			while (executorsIt.hasNext() && k < executorsPerSlot){
-				ExecutorDetails executor = executorsIt.next();
-				executorsGroup.add(executor);
-				k++;
-			}
-
-			if (executorsGroup.isEmpty()){
-				System.out.println("> All executors have been assigned");
-				break;
-			}
-			
-			WorkerSlot ws = availableSlots.get(0);
-			System.out.println(" > Assigning " + executorsGroup.size() + " executors to " + ws.getNodeId() + ":" + ws.getPort());
-			for(ExecutorDetails e : executorsGroup){
-				System.out.println(" > > " + e);
-			}
-
-			cluster.assign(ws, topologyId, executorsGroup);
-			availableSlots.remove(0);
-			
-			if (!executorsIt.hasNext()){
-				System.out.println("All executors have been assigned");
-				break;
-			}
+		System.out.println(" --- Total number of executor pools: " + executorPools.size());
+		for(int i = 0; i < executorPools.size(); i++){
+			ExecutorPool ep = executorPools.get(i);
+			System.out.println(" EP[" + i + "] P: " + ep.isPinned() + " A: " + ep.isAssigned() + " S: " + ep.isContainsSources() + " T: " + ep.isContainsTargets() + ":: " + ep.getExecutors());
 		}
+		System.out.println(" --- --- --- --- --- --- --- --- --- --- ");
+		
+		/* 4.r Assign pinned Executor Pools (RR Version) */
+		System.out.println("Assign pinned Executor Pools");
+		assignPinnedExecutorPoolsRoundRobin(topologyId, executorPools, availableSlots, cluster);
+
+		/* 5.r Initialize unpinned Executor Pools (Not needed in RR Version)*/
+
+		/* 6.r Assign unpinned Executor Pools (RR Version) */
+		System.out.println("Assign unpinned Executor Pools");
+		assignUnpinnedExecutorPoolsRoundRobin(topologyId, executorPools, availableSlots, cluster);
+
+		System.out.println(" --- Final EP Coordinates ");
+		for(int i = 0; i < executorPools.size(); i++){
+			ExecutorPool ep = executorPools.get(i);
+			System.out.println(" EP[" + i + "] P: " + ep.isPinned() + " A: " + ep.isAssigned() + " WS: " + ep.getWorkerSlot());
+		}
+
 	}
 	
 	
 	
-	private void scheduleTopology(TopologyDetails topology, GeneralTopologyContext topologyContext, 
+	private void scheduleSingleTopologyNetworkAware(TopologyDetails topology, GeneralTopologyContext topologyContext, 
 			List<WorkerSlot> availableSlots, Cluster cluster, Map<String, Node> knownNetworkSpaceNodes){
 
 		String topologyId = topology.getId();
@@ -436,6 +459,32 @@ public class InitialScheduler implements IScheduler{
 		}
 	}
 	
+
+	private void assignPinnedExecutorPoolsRoundRobin(String topologyId, List<ExecutorPool> executorPools, 
+			List<WorkerSlot> availableSlots, Cluster cluster){
+
+		for(ExecutorPool ep : executorPools){
+			
+			if (ep.isPinned() && !ep.isAssigned()){
+				if (availableSlots.size() > 0){
+					WorkerSlot ws = availableSlots.get(0);
+					
+					/* Assign Executor Pool to a worker slot */
+					cluster.assign(ws, topologyId, ep.getExecutors());
+					
+					System.out.println("... EP-pinned " + ep + " assigned to " + ws.getNodeId() + ":" + ws.getPort());
+					
+					/* Update available slots */
+					availableSlots.remove(0);
+					
+					/* Update Executor Pool */
+					ep.setWorkerSlot(ws);
+					ep.setAssigned(true);
+				}
+			}
+		}
+	}
+	
 	private void assignUnpinnedExecutorPools(String topologyId, List<ExecutorPool> executorPools, 
 			List<WorkerSlot> availableSlots, Cluster cluster, Map<String, Node> knownNetworkSpaceNodes){
 		
@@ -524,7 +573,32 @@ public class InitialScheduler implements IScheduler{
 			}
 		}
 	}
-	
+
+	private void assignUnpinnedExecutorPoolsRoundRobin(String topologyId, List<ExecutorPool> executorPools, 
+			List<WorkerSlot> availableSlots, Cluster cluster){
+		
+		for(ExecutorPool ep : executorPools){
+			
+			if (!ep.isAssigned()){
+				if (availableSlots.size() > 0){
+					WorkerSlot ws = availableSlots.get(0);
+					
+					/* Assign Executor Pool to a worker slot */
+					cluster.assign(ws, topologyId, ep.getExecutors());
+					
+					System.out.println("... EP-unpinned " + ep + " assigned to " + ws.getNodeId() + ":" + ws.getPort());
+					
+					/* Update available slots */
+					availableSlots.remove(0);
+					
+					/* Update Executor Pool */
+					ep.setWorkerSlot(ws);
+					ep.setAssigned(true);
+				}
+			}
+		}
+		
+	}
 
 	private Point computeNewPosition(ExecutorPool executorPool){
 		
@@ -929,9 +1003,6 @@ public class InitialScheduler implements IScheduler{
 			}
 		}
 		
-		
-
-		
 		return executorPools;
 		
 	}
@@ -987,7 +1058,6 @@ public class InitialScheduler implements IScheduler{
 				}
 			}
 
-			Node node = getWorkerSlotCoordinates(knownNetworkSpaceNodes, ws);
 
 			ExecutorPool ep = new ExecutorPool();
 			ep.setWorkerSlot(ws);
@@ -995,7 +1065,11 @@ public class InitialScheduler implements IScheduler{
 			ep.setPinned(false);
 			ep.setAssigned(true);
 			ep.setComponents(componentIds);
-			ep.setPosition(node);
+
+			if (knownNetworkSpaceNodes != null){
+				Node node = getWorkerSlotCoordinates(knownNetworkSpaceNodes, ws);
+				ep.setPosition(node);
+			}
 			
 			pool.add(ep);
 			

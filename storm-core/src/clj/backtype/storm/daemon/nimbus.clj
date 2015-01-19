@@ -637,8 +637,8 @@
         
         ;; Uniroma 2 - Topology context is passed to the scheduler 
         ;; if location-aware option has been set to true
-        _ (if (conf ADAPTIVE-SCHEDULER-INITIAL-SCHEDULER-LOCATION-AWARE)
-             ;; Uniroma 2 - call scheduler.scheduleUsingContext to schedule all the topologies
+        _ (if (conf ADAPTIVE-SCHEDULER-ENABLED)
+             ;; call scheduler.scheduleUsingContext to schedule all the topologies
              ;; the new assignments for all the topologies are in the cluster object.
              (.scheduleUsingContext (:scheduler nimbus) topologies cluster topologies-context)
              
