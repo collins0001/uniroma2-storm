@@ -70,7 +70,6 @@ public class InitialScheduler implements IScheduler{
 
 		this.networkSpace = SpaceFactory.createSpace();
 		
-		
 		/* Create managers */
 		createZookeeperClient();
 		

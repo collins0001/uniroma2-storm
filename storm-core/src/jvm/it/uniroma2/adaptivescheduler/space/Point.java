@@ -90,7 +90,7 @@ public class Point {
 		if (dimension < coordinates.length) {
 			return coordinates[dimension];
 		}
-		return Double.NaN;
+		return 0;
 	}
 
 	/**

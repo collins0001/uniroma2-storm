@@ -4,6 +4,7 @@ import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -21,6 +22,7 @@ public class CentralizedCleaner {
 	private static final String ZK_MIGRATION_DIR = "/extension/continuousscheduler/migrations";
 	private static final String ZK_COORDINATES_DIR = "/extension/networkspace/coordinates";
 
+	private static final int ROUND_BEFORE_DISAPPEAR = 3;
 	private static boolean DEBUG = false;
 	
 	@SuppressWarnings("rawtypes")
@@ -28,8 +30,10 @@ public class CentralizedCleaner {
 
 	private SimpleZookeeperClient zkClient = null; 
 
+	private Map<String, Integer> nodeRegistry = new HashMap<String, Integer>();
+	
 	public CentralizedCleaner(){
-		
+
 	}
 	
 	
@@ -151,7 +155,8 @@ public class CentralizedCleaner {
 		if (supervisors == null)
 			return;
 		
-		Set<String> aliveSupervisorIds = supervisors.keySet();
+		insertOrResetNodeToRegistry(supervisors);
+		Set<String> disappearedSupervisorIds = updateNodeRegistryCountersAndGetDisappeared();
 
 		if (!zkClient.exists(ZK_COORDINATES_DIR)){
 			return;
@@ -159,11 +164,52 @@ public class CentralizedCleaner {
 		
 		List<String> supervisorsCoordinates = zkClient.getChildren(ZK_COORDINATES_DIR);
 		for(String sc : supervisorsCoordinates){
-			if (!aliveSupervisorIds.contains(sc)){
+			if (disappearedSupervisorIds.contains(sc)){
 				zkClient.deleteRecursive(ZK_COORDINATES_DIR + "/" + sc);
 				if (DEBUG)
 					System.out.println("Coordinate of " + sc + " deleted");
 			}
 		}
 	}
+	
+	private void insertOrResetNodeToRegistry(Map<String, SupervisorDetails> supervisors){
+		/* Insert new supervisors or reset their counter */
+		for(String supervisorId : supervisors.keySet()){
+			
+			Integer nCounter;
+			if (nodeRegistry != null){
+				nCounter = nodeRegistry.get(supervisorId);
+			} 
+			nCounter = new Integer(-1);
+			nodeRegistry.put(supervisorId, nCounter);
+
+		}		
+	}
+
+	private Set<String> updateNodeRegistryCountersAndGetDisappeared(){
+		
+		Set<String> disappeared = new HashSet<String>();
+
+		if (nodeRegistry.isEmpty()){
+			return disappeared;
+		}
+		
+		Iterator<String> it = nodeRegistry.keySet().iterator();
+		
+		while(it.hasNext()){
+			String sid = it.next();
+			
+			Integer nc = nodeRegistry.get(sid);
+			int counter = nc.intValue() + 1;
+			nc = new Integer(counter);
+			
+			if (counter > ROUND_BEFORE_DISAPPEAR){
+				disappeared.add(sid);
+				it.remove();
+			}
+		}		
+		
+		return disappeared;
+	}
+
 }

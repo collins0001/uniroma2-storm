@@ -38,17 +38,16 @@ public class AugmentedWorkerSlot implements Comparable<AugmentedWorkerSlot> {
 
 	@Override
 	public int compareTo(AugmentedWorkerSlot o) {
-		if (this.port < o.port)
+		
+		if (this.hostname == null || o == null || o.hostname == null ||  this.hostname.compareToIgnoreCase(o.hostname) < 0)
 			return -1;
-		else if (this.port > o.port)
+		else if (this.hostname.compareToIgnoreCase(o.hostname) > 0)
 			return 1;
 		else{
-
-			if (this.hostname == null){
+			if (this.port <= o.port)
 				return -1;
-			}else{
-				return this.hostname.compareToIgnoreCase(o.hostname);
-			}
+			else 
+				return 1;
 		}
 	}
 	
