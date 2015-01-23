@@ -433,6 +433,12 @@ public class Config extends HashMap<String, Object> {
     public static final String SUPERVISOR_WORKER_TIMEOUT_SECS = "supervisor.worker.timeout.secs";
     public static final Object SUPERVISOR_WORKER_TIMEOUT_SECS_SCHEMA = Number.class;
 
+    /**
+     * Max worker restart tries.
+     */
+    public static final String SUPERVISOR_WORKER_START_MAX_RETRY = "supervisor.worker.start.retry.max";
+    public static final Object SUPERVISOR_WORKER_START_MAX_RETRY_SCHEMA = Number.class;
+
 
     /**
      * How long a worker can go without heartbeating during the initial launch before

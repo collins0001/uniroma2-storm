@@ -132,16 +132,19 @@
      )))
 
 (defn- wait-for-worker-launch [conf id start-time]
-  (let [state (worker-state conf id)]    
+  (let [state (worker-state conf id)
+        retries (atom 0)]    
     (loop []
       (let [hb (.get state LS-WORKER-HEARTBEAT)]
         (when (and
                (not hb)
                (<
-                (- (current-time-secs) start-time)
-                (conf SUPERVISOR-WORKER-START-TIMEOUT-SECS)
-                ))
-          (log-message id " still hasn't started")
+                 (- (current-time-secs) start-time)
+                 (conf SUPERVISOR-WORKER-START-TIMEOUT-SECS))
+              ;; XXX:  (< @retries (conf SUPERVISOR-WORKER-START-MAX-RETRY))
+                )
+          (swap! retries inc)
+          (log-message id " still hasn't started (retries:" @retries ")")
           (Time/sleep 500)
           (recur)
           )))
@@ -365,6 +368,22 @@
       (.add processes-event-manager sync-processes)
       )))
 
+;; Uniroma 2 -- begin 
+(defn send-heartbeat? [conf]
+  (if (conf ADAPTIVE-SCHEDULER-ENABLED)
+    (do
+      (log-message " ########################################################################### ")
+      (let [reliability (Utils/getNodeReliability)
+            random (Random.)
+            not-send (> (.nextDouble random) reliability)]
+        (log-message "XXX: Supervisor - send heartbeat? " (not not-send))
+        (not not-send)
+        ))
+    true))
+;; Uniroma 2 -- end 
+
+
+
 ;; in local state, supervisor stores who its current assignments are
 ;; another thread launches events to restart any dead processes if necessary
 (defserverfn mk-supervisor [conf shared-context ^ISupervisor isupervisor]
@@ -375,17 +394,32 @@
         [event-manager processes-event-manager :as managers] [(event/event-manager false) (event/event-manager false)]                         
         sync-processes (partial sync-processes supervisor)
         synchronize-supervisor (mk-synchronize-supervisor supervisor sync-processes event-manager processes-event-manager)
-        heartbeat-fn (fn [] (.supervisor-heartbeat!
-                               (:storm-cluster-state supervisor)
-                               (:supervisor-id supervisor)
-                               (SupervisorInfo. (current-time-secs)
-                                                (:my-hostname supervisor)
-                                                (:assignment-id supervisor)
-                                                (keys @(:curr-assignment supervisor))
-                                                ;; used ports
-                                                (.getMetadata isupervisor)
-                                                (conf SUPERVISOR-SCHEDULER-META)
-                                                ((:uptime supervisor)))))]
+        heartbeat-fn (fn []
+                      ;; Uniroma 2 -- add conditional behaviour 
+                      (if (send-heartbeat? conf)
+                       (do
+                         (log-message "XXX: Supervisor - sending heartbeat")
+                      ;; Uniroma 2 -- end 
+                         (.supervisor-heartbeat!
+                           (:storm-cluster-state supervisor)
+                           (:supervisor-id supervisor)
+                           (SupervisorInfo. (current-time-secs)
+                                            (:my-hostname supervisor)
+                                            (:assignment-id supervisor)
+                                            (keys @(:curr-assignment supervisor))
+                                            ;; used ports
+                                            (.getMetadata isupervisor)
+                                            (conf SUPERVISOR-SCHEDULER-META)
+                                            ((:uptime supervisor))))
+                       ;; Uniroma 2 -- added conditional behaviour
+                         )
+                        (do 
+                          (log-message "XXX: Supervisor -- deleting ephemeral node")
+                          (.remove-supervisor-heartbeat!
+                            (:storm-cluster-state supervisor)
+                            (:supervisor-id supervisor))))
+                       ;; Uniroma 2 -- end
+                       )]
     (heartbeat-fn)
     ;; Uniroma2 - Begin section create adaptation manager
     (reset! (:adaptation-manager supervisor) (AdaptationManager. (:isupervisor supervisor)))

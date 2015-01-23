@@ -42,6 +42,20 @@
                   ))
               assignment)))))
 
+;; Uniroma 2 -- begin 
+(defn send-heartbeat? [worker]
+  (if ((:conf worker) ADAPTIVE-SCHEDULER-ENABLED)
+    (do
+      (log-message " ########################################################################### ")
+      (let [reliability (Utils/getNodeReliability)
+            random (Random.)
+            not-send (> (.nextDouble random) reliability)]
+        (log-message "XXX: Send heartbeat? " (not not-send))
+        (not not-send)
+        ))
+    true))
+;; Uniroma 2 -- end 
+
 (defnk do-executor-heartbeats [worker :executors nil]
   ;; stats is how we know what executors are assigned to this worker 
   (let [stats (if-not executors
@@ -55,7 +69,10 @@
                :time-secs (current-time-secs)
                }]
     ;; do the zookeeper heartbeat
-    (.worker-heartbeat! (:storm-cluster-state worker) (:storm-id worker) (:assignment-id worker) (:port worker) zk-hb)    
+    ;; Uniroma 2 -- added if
+      (if (send-heartbeat? worker)
+          (.worker-heartbeat! (:storm-cluster-state worker) (:storm-id worker) (:assignment-id worker) (:port worker) zk-hb)    
+      )
     ))
 
 (defn do-heartbeat [worker]
@@ -76,7 +93,8 @@
     (.cleanup state 60) ; this is just in case supervisor is down so that disk doesn't fill up.
                          ; it shouldn't take supervisor 120 seconds between listing dir and reading it
 
-    ))
+    )
+  )
 
 (defn worker-outbound-tasks
   "Returns seq of task-ids that receive messages from this worker"
@@ -246,6 +264,8 @@
                                     (log-error t "Error when processing event")
                                     (halt-process! 20 "Error when processing an event")
                                 ))
+      :incoming-connections-up-atom (atom true)
+      :receive-thread-shutdown (atom {})
       ;; End of the section  
       :transfer-local-fn (mk-transfer-local-fn <>)
       :receiver-thread-count (get storm-conf WORKER-RECEIVER-THREAD-COUNT)
@@ -358,6 +378,34 @@
     (.shutdownNow (get dr WorkerTopologyContext/SHARED_EXECUTOR))
     (log-message "Shut down default resources")))
 
+;; Uniroma 2 -- begin 
+(defn simulate-reliability-on-incoming-connection [worker]
+  (when ((:conf worker) ADAPTIVE-SCHEDULER-ENABLED)
+    (log-message " ########################################################################### ")
+    (let [reliability (Utils/getNodeReliability)
+          random (Random.)
+          ;; Executing with p = (1-r)
+          execute (> (.nextDouble random) reliability)]
+      (log-message "XXX: Execute? " execute )
+      (when execute
+        (if @(:incoming-connections-up-atom worker)
+          (do
+            (log-message "XXX: Shutting down receive thread...") 
+            (@(:receive-thread-shutdown worker))
+            (reset! (:incoming-connections-up-atom worker) false))
+           (do
+            (let
+             [receive-thread-shutdown (launch-receive-thread worker)
+              ;; Uniroma 2 -- insert receive thread into the shared data
+              _ (reset! (:receive-thread-shutdown worker) receive-thread-shutdown)]
+              (reset! (:incoming-connections-up-atom worker) true))
+             (log-message "XXX: Receive thread launched...") 
+             )
+          )
+        ))
+    ))
+;; Uniroma 2 -- end 
+
 ;; TODO: should worker even take the storm-id as input? this should be
 ;; deducable from cluster state (by searching through assignments)
 ;; what about if there's inconsistency in assignments? -> but nimbus
@@ -395,6 +443,12 @@
         _ (reset! executors (dofor [e (:executors worker)] (executor/mk-executor worker e)))
         receive-thread-shutdown (launch-receive-thread worker)
         
+        ;; Uniroma 2 -- insert receive thread into the shared data
+        ;; _ (reset! (:receive-thread-shutdown worker) receive-thread-shutdown)
+        ;; sim-reliability-fn #(simulate-reliability-on-incoming-connection worker)
+        ;; _ (schedule-recurring (:heartbeat-timer worker) 0 (conf WORKER-HEARTBEAT-FREQUENCY-SECS) sim-reliability-fn)
+        ;; Uniroma 2 -- end 
+
         transfer-tuples (mk-transfer-tuples-handler worker)
         
         transfer-thread (disruptor/consume-loop* (:transfer-queue worker) transfer-tuples)                                       

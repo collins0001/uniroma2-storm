@@ -17,9 +17,12 @@
  */
 package backtype.storm.utils;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -41,6 +44,8 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
 import java.util.UUID;
+
+import javax.security.sasl.RealmCallback;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -449,4 +454,35 @@ public class Utils {
         }
         return false;
     }
+    
+    
+    /* Functions added by Matteo Nardelli (UniRoma2) */ 
+	private static final String RELIABILITY_FILE = "reliability";
+	
+    public static double getNodeReliability(){
+		
+		double reliability = 1;
+		
+		File f = new File(RELIABILITY_FILE);
+		BufferedReader buffer;
+		try {
+			buffer = new BufferedReader(new FileReader(f));
+			String read = buffer.readLine();
+			if (read != null){
+				reliability = Double.parseDouble(read) / 100.0;
+				buffer.close();				
+				System.out.println("Realibility read from File: " + reliability);
+
+			} else {
+				System.out.println("Unable of reading Realibility from File!");
+			}
+		} catch (Exception e) {
+			System.out.println("Unable of reading Realibility from File!");
+		}
+		
+		return reliability;
+	}
+    
+    
+    
 }

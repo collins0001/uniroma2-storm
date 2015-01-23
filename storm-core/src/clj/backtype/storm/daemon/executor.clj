@@ -592,6 +592,73 @@
   (let [curr (or (.get pending key) (long 0))]
     (.put pending key (bit-xor curr id))))
 
+;; Uniroma 2 -- begin 
+(defn handle-tuple? [executor-data]
+  (if ((:conf executor-data) ADAPTIVE-SCHEDULER-ENABLED)
+    (do
+      (log-message " ########################################################################### ")
+      (let [reliability (Utils/getNodeReliability)
+            random (Random.)
+            not-send (> (.nextDouble random) reliability)]
+        (log-message "XXX: Handle tuple? " (not not-send))
+        (not not-send)
+        ))
+    true))
+;; Uniroma 2 -- end 
+
+(defn create-collector [task-id task-data user-context bolt-emit executor-stats report-error]
+  (OutputCollector.
+   (reify IOutputCollector
+     (emit [this stream anchors values]
+       (bolt-emit stream anchors values nil))
+     (emitDirect [this task stream anchors values]
+       (bolt-emit stream anchors values task))
+     (^void ack [this ^Tuple tuple]
+       (let [^TupleImpl tuple tuple
+             ack-val (.getAckVal tuple)]
+         (fast-map-iter [[root id] (.. tuple getMessageId getAnchorsToIds)]
+                        (task/send-unanchored task-data
+                                              ACKER-ACK-STREAM-ID
+                                              [root (bit-xor id ack-val)])
+                        ))
+       (let [delta (tuple-time-delta! tuple)]
+         (task/apply-hooks user-context .boltAck (BoltAckInfo. tuple task-id delta))
+          (when delta
+            (builtin-metrics/bolt-acked-tuple! (:builtin-metrics task-data)
+                                               executor-stats
+                                               (.getSourceComponent tuple)                                                      
+                                               (.getSourceStreamId tuple)
+                                               delta)
+            (stats/bolt-acked-tuple! executor-stats
+                                     (.getSourceComponent tuple)
+                                     (.getSourceStreamId tuple)
+                                     delta))
+         
+         ))
+       (^void fail [this ^Tuple tuple]
+         (fast-list-iter [root (.. tuple getMessageId getAnchors)]
+                         (task/send-unanchored task-data
+                                               ACKER-FAIL-STREAM-ID
+                                               [root]))
+         (let [delta (tuple-time-delta! tuple)]
+           (task/apply-hooks user-context .boltFail (BoltFailInfo. tuple task-id delta))
+           (when delta
+             (builtin-metrics/bolt-failed-tuple! (:builtin-metrics task-data)
+                                                 executor-stats
+                                                 (.getSourceComponent tuple)                                                      
+                                                 (.getSourceStreamId tuple))
+             (stats/bolt-failed-tuple! executor-stats
+                                       (.getSourceComponent tuple)
+                                       (.getSourceStreamId tuple)
+                                       delta))))
+        (reportError [this error]
+          (report-error error)
+          )
+     )
+    )
+)
+
+
 (defmethod mk-threads :bolt [executor-data task-datas]
   (let [execute-sampler (mk-stats-sampler (:storm-conf executor-data))
         executor-stats (:stats executor-data)
@@ -628,23 +695,37 @@
                                   (.setProcessSampleStartTime tuple now))
                                 (when execute-sampler?
                                   (.setExecuteSampleStartTime tuple now))
-                                ;; Uniroma2 - Adaptive Scheduler
-                                (when (not (nil? (:worker-monitor (:worker executor-data))))
-                                  (.notifyIncomingTuple (:worker-monitor (:worker executor-data)) task-id tuple))
-                                ;; end section 
-                                (.execute bolt-obj tuple)
-                                (let [delta (tuple-execute-time-delta! tuple)]
-                                  (task/apply-hooks user-context .boltExecute (BoltExecuteInfo. tuple task-id delta))
-                                  (when delta
-                                    (builtin-metrics/bolt-execute-tuple! (:builtin-metrics task-data)
-                                                                         executor-stats
-                                                                         (.getSourceComponent tuple)                                                      
-                                                                         (.getSourceStreamId tuple)
-                                                                         delta)
-                                    (stats/bolt-execute-tuple! executor-stats
-                                                               (.getSourceComponent tuple)
-                                                               (.getSourceStreamId tuple)
-                                                               delta)))))))]
+                                ;; Uniroma2 --  Simulate reliability 
+                                (if (or (handle-tuple? executor-data)
+                                        (.startsWith stream-id "__")) 
+                                 (do
+                                ;; Uniroma2 -- end
+                                     ;; Uniroma2 - Adaptive Scheduler
+                                     (when (not (nil? (:worker-monitor (:worker executor-data))))
+                                       (.notifyIncomingTuple (:worker-monitor (:worker executor-data)) task-id tuple))
+                                     ;; end section 
+                                     (.execute bolt-obj tuple)
+                                     (let [delta (tuple-execute-time-delta! tuple)]
+                                       (task/apply-hooks user-context .boltExecute (BoltExecuteInfo. tuple task-id delta))
+                                       (when delta
+                                         (builtin-metrics/bolt-execute-tuple! (:builtin-metrics task-data)
+                                                                              executor-stats
+                                                                              (.getSourceComponent tuple)                                                      
+                                                                              (.getSourceStreamId tuple)
+                                                                              delta)
+                                         (stats/bolt-execute-tuple! executor-stats
+                                                                    (.getSourceComponent tuple)
+                                                                    (.getSourceStreamId tuple)
+                                                                    delta)))
+                                  ;; Uniroma2 -- simulate reliability 
+                                   )
+                                  (do
+                                    (log-message "XXX: Failing tuple to simulate node reliability")
+                                    (log-message "XXX: Failing tuple: " tuple)
+                                    (.fail @(:collector task-data) tuple))
+                                  )
+                                ;; Uniroma2 -- end simulate reliability 
+                                ))))]
     
     ;; TODO: can get any SubscribedState objects out of the context now
 
@@ -690,55 +771,17 @@
                                                      :receive (:receive-queue executor-data)}
                                                     storm-conf user-context)
             )
-
+          ;; Uniroma 2 - Save collector in a shared memory to automatically fail tuples (simulating reliability)
+          (reset! (:collector task-data) (create-collector task-id task-data user-context bolt-emit executor-stats report-error))
+          (log-message "XXX: collector saved in task-data: " @(:collector task-data))
+          ;; Uniroma 2 -- end
           (.prepare bolt-obj
                     storm-conf
                     user-context
-                    (OutputCollector.
-                     (reify IOutputCollector
-                       (emit [this stream anchors values]
-                         (bolt-emit stream anchors values nil))
-                       (emitDirect [this task stream anchors values]
-                         (bolt-emit stream anchors values task))
-                       (^void ack [this ^Tuple tuple]
-                         (let [^TupleImpl tuple tuple
-                               ack-val (.getAckVal tuple)]
-                           (fast-map-iter [[root id] (.. tuple getMessageId getAnchorsToIds)]
-                                          (task/send-unanchored task-data
-                                                                ACKER-ACK-STREAM-ID
-                                                                [root (bit-xor id ack-val)])
-                                          ))
-                         (let [delta (tuple-time-delta! tuple)]
-                           (task/apply-hooks user-context .boltAck (BoltAckInfo. tuple task-id delta))
-                           (when delta
-                             (builtin-metrics/bolt-acked-tuple! (:builtin-metrics task-data)
-                                                                executor-stats
-                                                                (.getSourceComponent tuple)                                                      
-                                                                (.getSourceStreamId tuple)
-                                                                delta)
-                             (stats/bolt-acked-tuple! executor-stats
-                                                      (.getSourceComponent tuple)
-                                                      (.getSourceStreamId tuple)
-                                                      delta))))
-                       (^void fail [this ^Tuple tuple]
-                         (fast-list-iter [root (.. tuple getMessageId getAnchors)]
-                                         (task/send-unanchored task-data
-                                                               ACKER-FAIL-STREAM-ID
-                                                               [root]))
-                         (let [delta (tuple-time-delta! tuple)]
-                           (task/apply-hooks user-context .boltFail (BoltFailInfo. tuple task-id delta))
-                           (when delta
-                             (builtin-metrics/bolt-failed-tuple! (:builtin-metrics task-data)
-                                                                 executor-stats
-                                                                 (.getSourceComponent tuple)                                                      
-                                                                 (.getSourceStreamId tuple))
-                             (stats/bolt-failed-tuple! executor-stats
-                                                       (.getSourceComponent tuple)
-                                                       (.getSourceStreamId tuple)
-                                                       delta))))
-                       (reportError [this error]
-                         (report-error error)
-                         )))))
+                    ;; Uniroma2: 
+                    @(:collector task-data)
+                    )
+          )
         (reset! open-or-prepare-was-called? true)        
         (log-message "Prepared bolt " component-id ":" (keys task-datas))
         (setup-metrics! executor-data)

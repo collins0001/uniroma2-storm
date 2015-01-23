@@ -130,9 +130,12 @@
   (worker-heartbeat! [this storm-id node port info])
   (remove-worker-heartbeat! [this storm-id node port])
   (supervisor-heartbeat! [this supervisor-id info])
+  (remove-supervisor-heartbeat! [this supervisor-id])
   (activate-storm! [this storm-id storm-base])
   (update-storm! [this storm-id new-elems])
+  ;; Uniroma 2
   (remove-storm-base! [this storm-id])
+  ;; Uniroma 2 -- end
   (set-assignment! [this storm-id info])
   (remove-storm! [this storm-id])
   (report-error [this storm-id task-id error])
@@ -328,6 +331,12 @@
         [this supervisor-id info]
         (set-ephemeral-node cluster-state (supervisor-path supervisor-id) (Utils/serialize info)))
 
+      ;; Uniroma2
+      (remove-supervisor-heartbeat!
+        [this supervisor-id]
+        (delete-node cluster-state (supervisor-path supervisor-id)))
+      ;; Uniroma2 -- end
+      
       (activate-storm!
         [this storm-id storm-base]
         (set-data cluster-state (storm-path storm-id) (Utils/serialize storm-base)))

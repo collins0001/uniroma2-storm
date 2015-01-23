@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -187,6 +188,10 @@ public class InitialScheduler implements IScheduler{
 		
 		/* Get the list of available slots */
 		List<WorkerSlot> availableSlots = cluster.getAvailableSlots();
+		
+		/* XXX: Order Slot by Hostname will not preserve anymore the RR policy. 
+		 * It's used to produce results comparable to the network 
+		 * aware policy */
 		availableSlots = orderAvailableSlots(cluster, availableSlots);
 		
 		if (topologiesToSchedule != null){
@@ -282,6 +287,40 @@ public class InitialScheduler implements IScheduler{
 		return sortedList;
 	}
 
+	private List<WorkerSlot> orderAvailableSlotsByPort(Cluster cluster, List<WorkerSlot> workerSlots){
+
+		List<AugmentedWorkerSlot> augmentedWorkerSlots = new ArrayList<AugmentedWorkerSlot>();
+		List<WorkerSlot> sortedList = new ArrayList<WorkerSlot>();
+		
+		for(WorkerSlot ws : workerSlots){
+			String nodeId = ws.getNodeId();
+			SupervisorDetails s = cluster.getSupervisorById(nodeId);
+			String hostname = s.getHost();
+			
+			AugmentedWorkerSlot aws = new AugmentedWorkerSlot(ws.getPort(), hostname, ws);	
+			augmentedWorkerSlots.add(aws);
+		}
+
+		Collections.sort(augmentedWorkerSlots, new Comparator<AugmentedWorkerSlot>(){
+			@Override
+			public int compare(AugmentedWorkerSlot o1, AugmentedWorkerSlot o2) {
+				if (o1.getPort() < o2.getPort())
+					return -1;
+				else if (o1.getPort() > o2.getPort())
+					return 1;
+				else{
+					return o1.getHostname().compareToIgnoreCase(o2.getHostname());
+				}
+			}
+		});
+		
+		for(AugmentedWorkerSlot aws : augmentedWorkerSlots){
+			sortedList.add(aws.getWorkerSlot());
+		}
+		
+		return sortedList;
+	}
+
 
 	private void scheduleSingleTopologyRoundRobin(TopologyDetails topology, 
 				GeneralTopologyContext topologyContext, List<WorkerSlot> availableSlots, Cluster cluster){
@@ -335,7 +374,9 @@ public class InitialScheduler implements IScheduler{
 		assignPinnedExecutorPoolsRoundRobin(topologyId, executorPools, availableSlots, cluster);
 
 		/* 5.r Initialize unpinned Executor Pools (Not needed in RR Version)*/
-
+		/* Preserve RR policy */
+		availableSlots = orderAvailableSlotsByPort(cluster, availableSlots);
+		
 		/* 6.r Assign unpinned Executor Pools (RR Version) */
 		System.out.println("Assign unpinned Executor Pools");
 		assignUnpinnedExecutorPoolsRoundRobin(topologyId, executorPools, availableSlots, cluster);
