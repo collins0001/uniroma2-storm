@@ -167,6 +167,7 @@ adaptivescheduler.space.weight.1: 1.0
 adaptivescheduler.space.weight.2: 1.0
 adaptivescheduler.space.weight.3: 1.0
 adaptivescheduler.space.reliability: 90.0
+adaptivescheduler.space.third.as.utilization: true
 
 ## Adaptive Scheduler: Advanced Parameters
 ## ## Network Space

@@ -15,7 +15,7 @@ import it.uniroma2.adaptivescheduler.space.SimpleKNearestNodes;
 import it.uniroma2.adaptivescheduler.space.Space;
 import it.uniroma2.adaptivescheduler.space.SpaceFactory;
 import it.uniroma2.adaptivescheduler.utils.SystemStatusReader;
-import it.uniroma2.adaptivescheduler.vivaldi.NetworkSpaceManager;
+import it.uniroma2.adaptivescheduler.vivaldi.ResourceMonitor;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 import it.uniroma2.statserver.messages.DataRateReport;
 import it.uniroma2.statserver.messages.NewAssignmentReport;
@@ -85,14 +85,14 @@ public class ContinuousScheduler {
 	private SimpleZookeeperClient zkClient; 
 	private DatabaseManager databaseManager; 
 
-	private NetworkSpaceManager networkSpaceManager;
+	private ResourceMonitor networkSpaceManager;
 	
 	private Map<String, Integer> cooldownBuffer;
 	private List<String> localTopologyComponentMigrations;
 	
 	@SuppressWarnings("rawtypes")
 	public ContinuousScheduler(ISupervisor supervisor, SimpleZookeeperClient zkClient, 
-			DatabaseManager databaseManager, NetworkSpaceManager networkSpaceManager, Map config) {
+			DatabaseManager databaseManager, ResourceMonitor networkSpaceManager, Map config) {
 		super();
 		this.supervisor = supervisor;
 		this.nodeId = this.supervisor.getSupervisorId();
@@ -1351,17 +1351,16 @@ public class ContinuousScheduler {
 					String componentTaskId = augmentedExecutors.getComponentId();
 					componentTaskId += "-" +augmentedExecutors.getExecutor().getStartTask() + ":" + augmentedExecutors.getExecutor().getEndTask();
 					
-					reliability = Double.MAX_VALUE;
-					int reliabilityIndex = networkSpaceManager.getSpace().getLatencyDimensions();
-					double rFactor = networkSpaceManager.getCoordinates().get(reliabilityIndex);
-
+					/* Node reliability */
+					reliability = networkSpaceManager.getNodeReliability();
 					if (reliability > 0){
-						/* reliability = 1 - rFactor */
-						reliability = Math.log(1 - rFactor);
+						/* we use log(reliability) to simplify the computation of the application reliability */
+						reliability = Math.log(reliability);
 					}
 					
-					try{ cpuusage = SystemStatusReader.cpuUsage(SystemStatusReader.AVERAGE); }catch(Exception e){}
-
+					/* Node utilization */
+					cpuusage = networkSpaceManager.getNodeUtilization();
+					
 					Socket clientSocket;
 					try {
 						clientSocket = new Socket(XXX_STATSERVER_HOSTNAME, XXX_STATSERVER_PORT);

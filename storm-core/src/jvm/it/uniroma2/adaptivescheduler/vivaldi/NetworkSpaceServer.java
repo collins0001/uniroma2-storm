@@ -10,10 +10,10 @@ public class NetworkSpaceServer implements Runnable{
 	public static final int REQUEST_COORDINATES = 100;
 	
 	private final int port; 
-	private final NetworkSpaceManager spaceManager; 
+	private final ResourceMonitor spaceManager; 
 	private ServerSocket serverSocket;
 	
-	public NetworkSpaceServer(int serverPort, NetworkSpaceManager spaceManager) {
+	public NetworkSpaceServer(int serverPort, ResourceMonitor spaceManager) {
 		this.port = serverPort;
 		this.spaceManager = spaceManager;
 		

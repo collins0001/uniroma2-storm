@@ -81,6 +81,7 @@ public class Utils {
             ObjectOutputStream oos = new ObjectOutputStream(bos);
             oos.writeObject(obj);
             oos.close();
+            
             return bos.toByteArray();
         } catch(IOException ioe) {
             throw new RuntimeException(ioe);

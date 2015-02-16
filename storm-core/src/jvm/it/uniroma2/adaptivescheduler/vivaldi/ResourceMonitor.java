@@ -5,6 +5,7 @@ import it.uniroma2.adaptivescheduler.space.Point;
 import it.uniroma2.adaptivescheduler.space.Serializer;
 import it.uniroma2.adaptivescheduler.space.Space;
 import it.uniroma2.adaptivescheduler.space.SpaceFactory;
+import it.uniroma2.adaptivescheduler.utils.SystemStatusReader;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 
 import java.io.BufferedReader;
@@ -36,7 +37,7 @@ import backtype.storm.scheduler.SupervisorDetails;
 import com.google.gson.Gson;
 
 
-public class NetworkSpaceManager {
+public class ResourceMonitor {
 	
 	/* Default values. They will be updated using configuration information */
 	private static double ALPHA = 0.5;
@@ -45,6 +46,8 @@ public class NetworkSpaceManager {
 	private static double CONFIDENCE_THRESHOLD = 0.70;
 	private static int ROUND_BETWEEN_PUBLICATION = 1;
 	private static boolean EXTENDED_SPACE = false;
+	private static boolean EXTEND_SPACE_WITH_UTILIZATION = false;
+	
 	
 	private static final boolean NS_DEBUG = false;
 	private static final String RELIABILITY_FILE = "reliability";
@@ -90,12 +93,12 @@ public class NetworkSpaceManager {
 	
 	private Map<String, Object> config;
 
-	public NetworkSpaceManager(String id) {
+	public ResourceMonitor(String id) {
 		this(id, null, null);
 	}
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" }) 
-	public NetworkSpaceManager(String id, SimpleZookeeperClient zooKeeperClient, Map config) {
+	public ResourceMonitor(String id, SimpleZookeeperClient zooKeeperClient, Map config) {
 	
 		this.config = (Map<String, Object>) config;
 		
@@ -123,7 +126,7 @@ public class NetworkSpaceManager {
 
 		if (config != null){
 			readConfig(config);
-			initializeSpaceDimensions(config);
+			saveReliabilityOnFile(config);
 			
 		}
 		
@@ -174,12 +177,23 @@ public class NetworkSpaceManager {
 				System.out.println("Use extended space: " + EXTENDED_SPACE);
 			}
 
+			bValue = (Boolean) config.get(Config.ADAPTIVE_SCHEDULER_SPACE_USE_UTILIZATION);
+			if (bValue != null){
+				EXTEND_SPACE_WITH_UTILIZATION = bValue.booleanValue();
+				System.out.println("Use node utilization as third dimension: "  +  EXTEND_SPACE_WITH_UTILIZATION);
+				System.out.println("Use node availability as third dimension: " + !EXTEND_SPACE_WITH_UTILIZATION);
+			}
+			
 		}
 	}
 	
 	@SuppressWarnings("rawtypes")
-	private void initializeSpaceDimensions(Map config){
-		
+	private void saveReliabilityOnFile(Map config){
+		/*
+		 * This function reads the node reliability from storm.yaml and saves it on a RELIABILITY_FILE.
+		 * The RELIABILITY_FILE allow to change node reliability at runtime; 
+		 * this file is also used in Utils/readReliability
+		 */
 		Boolean useExtendedSpace = (Boolean) config.get(Config.ADAPTIVE_SCHEDULER_USE_EXTENDED_SPACE);
 		if (useExtendedSpace == null){
 			return;
@@ -203,7 +217,7 @@ public class NetworkSpaceManager {
 		}
 	}
 	
-	private double getNodeReliability(){
+	public double getNodeReliability(){
 		
 		double reliability = 1;
 		
@@ -231,6 +245,16 @@ public class NetworkSpaceManager {
 		}
 		
 		return reliability;
+	}
+	
+	public double getNodeUtilization(){
+
+		double cpuusage = 0;
+		try{
+			cpuusage = SystemStatusReader.cpuUsage(SystemStatusReader.AVERAGE);
+		}catch(Exception e){}
+		
+		return cpuusage;
 	}
 	
 	/**
@@ -606,7 +630,14 @@ public class NetworkSpaceManager {
 			ins.close();
 			out.close();
 			clientSocket.close();
-		    
+			
+			/* DEBUG: print coordianteExchangeMessage size in byte */
+			String serializedMsg = gson.toJson(message);
+			byte[] utf8Bytes = serializedMsg.getBytes("UTF-8");
+		    int messageSize = utf8Bytes.length;
+		    System.out.println(" ++++++++++++++++++++ CoordinateExchangeMessage size: " + messageSize + " bytes ++++++++++++++++++++ ");
+			/* DEBUG: print coordianteExchangeMessage size in byte */
+			
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -693,20 +724,20 @@ public class NetworkSpaceManager {
 		
 		if (EXTENDED_SPACE){
 			
-			double reliability = getNodeReliability();
-			double rFactor = 1 -  reliability;
-			coordinates.set(networkSpace.getLatencyDimensions(), rFactor);
-			System.out.println("Updated reliability: " + reliability + "(" + rFactor + ")");
+			if (EXTEND_SPACE_WITH_UTILIZATION){
 			
-//			double cpuusage = 0;
-//			try{
-//				cpuusage = SystemStatusReader.cpuUsage(SystemStatusReader.AVERAGE);
-//			}catch(Exception e){}
-//			
-//			for(int i = networkSpace.getLatencyDimensions(); i < networkSpace.getTotalDimensions(); i++){
-//				coordinates.set(i, cpuusage);
-//			}
-//			System.out.println("Update usage: " + cpuusage);
+				double cpuusage = getNodeUtilization();
+				coordinates.set(networkSpace.getLatencyDimensions(), cpuusage);
+				System.out.println("Update usage: " + cpuusage);
+				
+			} else {
+
+				double reliability = getNodeReliability();
+				double rFactor = 1 - reliability;
+				coordinates.set(networkSpace.getLatencyDimensions(), rFactor);
+				System.out.println("Updated reliability: " + reliability + "(" + rFactor + ")");
+				
+			}
 		}
 		
 	}

@@ -1041,6 +1041,9 @@ public class Config extends HashMap<String, Object> {
     public static final String ADAPTIVE_SCHEDULER_SPACE_RELIABILITY = "adaptivescheduler.space.reliability";
     public static final Object ADAPTIVE_SCHEDULER_SPACE_RELIABILITY_SCHEMA = Double.class;
 
+    public static final String ADAPTIVE_SCHEDULER_SPACE_USE_UTILIZATION = "adaptivescheduler.space.third.as.utilization";
+    public static final Object ADAPTIVE_SCHEDULER_SPACE_USE_UTILIZATION_SCHEMA = Boolean.class;
+
     
     
     /*
