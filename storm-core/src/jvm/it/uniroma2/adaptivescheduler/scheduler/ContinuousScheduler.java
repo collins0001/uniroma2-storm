@@ -14,7 +14,7 @@ import it.uniroma2.adaptivescheduler.space.Point;
 import it.uniroma2.adaptivescheduler.space.SimpleKNearestNodes;
 import it.uniroma2.adaptivescheduler.space.Space;
 import it.uniroma2.adaptivescheduler.space.SpaceFactory;
-import it.uniroma2.adaptivescheduler.utils.SystemStatusReader;
+import it.uniroma2.adaptivescheduler.utils.CPUMonitor;
 import it.uniroma2.adaptivescheduler.vivaldi.ResourceMonitor;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 import it.uniroma2.statserver.messages.DataRateReport;
@@ -708,8 +708,12 @@ public class ContinuousScheduler {
 		cluster.freeSlots(workerSlotToFree);
     	
     	/* Reassign Executor */
-		cluster.assign(currentExecutorWorkerSlot, topologyId, executorsToConfirm);
-		cluster.assign(candidateSlot, topologyId, executorsToReassign);
+		if (!executorsToConfirm.isEmpty()){
+			cluster.assign(currentExecutorWorkerSlot, topologyId, executorsToConfirm);
+		}
+		if (!executorsToReassign.isEmpty()){
+			cluster.assign(candidateSlot, topologyId, executorsToReassign);
+		}
 		
 		/* NOTE: the effective migration is differred */
 		unsetMigration(topologyId, augmentedExecutors.getComponentId());
@@ -1408,7 +1412,7 @@ public class ContinuousScheduler {
 			bfile = new BufferedWriter(new FileWriter("log_" + supervisor.getSupervisorId() + ".txt", true));
 			outputFile = new PrintWriter(bfile);
 
-			try{ cpuusage = SystemStatusReader.cpuUsage(SystemStatusReader.AVERAGE); }catch(Exception e){}
+			try{ cpuusage = CPUMonitor.cpuUsage(); }catch(Exception e){}
 			
 			String message = System.currentTimeMillis() + ", " + cpuusage + ", " + networkSpaceManager.usingExtendedSpace();
 			System.out.println("-- " + message + " -- ");

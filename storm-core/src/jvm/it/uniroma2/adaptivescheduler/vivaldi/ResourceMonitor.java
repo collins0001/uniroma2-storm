@@ -5,7 +5,7 @@ import it.uniroma2.adaptivescheduler.space.Point;
 import it.uniroma2.adaptivescheduler.space.Serializer;
 import it.uniroma2.adaptivescheduler.space.Space;
 import it.uniroma2.adaptivescheduler.space.SpaceFactory;
-import it.uniroma2.adaptivescheduler.utils.SystemStatusReader;
+import it.uniroma2.adaptivescheduler.utils.CPUMonitor;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 
 import java.io.BufferedReader;
@@ -251,7 +251,7 @@ public class ResourceMonitor {
 
 		double cpuusage = 0;
 		try{
-			cpuusage = SystemStatusReader.cpuUsage(SystemStatusReader.AVERAGE);
+			cpuusage = CPUMonitor.cpuUsage();
 		}catch(Exception e){}
 		
 		return cpuusage;

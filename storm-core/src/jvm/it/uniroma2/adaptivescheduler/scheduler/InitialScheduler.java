@@ -61,6 +61,8 @@ public class InitialScheduler implements IScheduler{
 
 	private Space networkSpace;
 	
+	private boolean waitingNextRoundToReschedule = false;
+	
 	@SuppressWarnings("rawtypes")
 	@Override
 	public void prepare(Map conf) {
@@ -284,6 +286,7 @@ public class InitialScheduler implements IScheduler{
 			sortedList.add(aws.getWorkerSlot());
 		}
 		
+
 		return sortedList;
 	}
 
@@ -316,6 +319,11 @@ public class InitialScheduler implements IScheduler{
 		
 		for(AugmentedWorkerSlot aws : augmentedWorkerSlots){
 			sortedList.add(aws.getWorkerSlot());
+		}
+		
+		System.out.println(" --- Sorted Slots: --- ");
+		for(WorkerSlot ws : sortedList){
+			System.out.println(" -- " + ws.toString());
 		}
 		
 		return sortedList;
@@ -431,6 +439,7 @@ public class InitialScheduler implements IScheduler{
 		}
 		if (!schedulingNeeded)
 			return;
+		
 		
 		/* 2. Determinate relations between Executor Pools */
 		System.out.println("Determinate relations between Executor Pools");
