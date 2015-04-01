@@ -10,6 +10,7 @@ import it.uniroma2.adaptivescheduler.space.Serializer;
 import it.uniroma2.adaptivescheduler.space.SimpleKNearestNodes;
 import it.uniroma2.adaptivescheduler.space.Space;
 import it.uniroma2.adaptivescheduler.space.SpaceFactory;
+import it.uniroma2.adaptivescheduler.space.SpringForce;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 
 import java.io.IOException;
@@ -37,7 +38,7 @@ import backtype.storm.scheduler.TopologyDetails;
 import backtype.storm.scheduler.WorkerSlot;
 import backtype.storm.task.GeneralTopologyContext;
 
-public class InitialScheduler implements IScheduler{
+public class BootstrapScheduler implements IScheduler{
 
 	/* Const */
 	private static final String ZK_MIGRATION_DIR = "/extension/continuousscheduler/migrations";

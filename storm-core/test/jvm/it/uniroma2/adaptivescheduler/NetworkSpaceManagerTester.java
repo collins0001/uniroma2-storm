@@ -1,6 +1,6 @@
 package it.uniroma2.adaptivescheduler;
 
-import it.uniroma2.adaptivescheduler.vivaldi.ResourceMonitor;
+import it.uniroma2.adaptivescheduler.vivaldi.QoSMonitor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,10 +11,10 @@ import backtype.storm.scheduler.SupervisorDetails;
 
 public class NetworkSpaceManagerTester {
 
-	private ResourceMonitor manager; 
+	private QoSMonitor manager; 
 	
 	public NetworkSpaceManagerTester() {
-		manager = new ResourceMonitor("test-id");
+		manager = new QoSMonitor("test-id");
 	}
 	
 

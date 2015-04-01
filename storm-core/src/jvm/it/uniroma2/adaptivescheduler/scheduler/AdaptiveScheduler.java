@@ -14,8 +14,9 @@ import it.uniroma2.adaptivescheduler.space.Point;
 import it.uniroma2.adaptivescheduler.space.SimpleKNearestNodes;
 import it.uniroma2.adaptivescheduler.space.Space;
 import it.uniroma2.adaptivescheduler.space.SpaceFactory;
+import it.uniroma2.adaptivescheduler.space.SpringForce;
 import it.uniroma2.adaptivescheduler.utils.CPUMonitor;
-import it.uniroma2.adaptivescheduler.vivaldi.ResourceMonitor;
+import it.uniroma2.adaptivescheduler.vivaldi.QoSMonitor;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 import it.uniroma2.statserver.messages.DataRateReport;
 import it.uniroma2.statserver.messages.NewAssignmentReport;
@@ -54,7 +55,7 @@ import backtype.storm.task.GeneralTopologyContext;
 
 import com.google.gson.Gson;
 
-public class ContinuousScheduler {
+public class AdaptiveScheduler {
 
 	/* XXX: */
 	private static final String XXX_STATSERVER_HOSTNAME = "160.80.97.155";
@@ -85,14 +86,14 @@ public class ContinuousScheduler {
 	private SimpleZookeeperClient zkClient; 
 	private DatabaseManager databaseManager; 
 
-	private ResourceMonitor networkSpaceManager;
+	private QoSMonitor networkSpaceManager;
 	
 	private Map<String, Integer> cooldownBuffer;
 	private List<String> localTopologyComponentMigrations;
 	
 	@SuppressWarnings("rawtypes")
-	public ContinuousScheduler(ISupervisor supervisor, SimpleZookeeperClient zkClient, 
-			DatabaseManager databaseManager, ResourceMonitor networkSpaceManager, Map config) {
+	public AdaptiveScheduler(ISupervisor supervisor, SimpleZookeeperClient zkClient, 
+			DatabaseManager databaseManager, QoSMonitor networkSpaceManager, Map config) {
 		super();
 		this.supervisor = supervisor;
 		this.nodeId = this.supervisor.getSupervisorId();

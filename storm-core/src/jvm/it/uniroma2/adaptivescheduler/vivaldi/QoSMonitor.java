@@ -37,7 +37,7 @@ import backtype.storm.scheduler.SupervisorDetails;
 import com.google.gson.Gson;
 
 
-public class ResourceMonitor {
+public class QoSMonitor {
 	
 	/* Default values. They will be updated using configuration information */
 	private static double ALPHA = 0.5;
@@ -93,12 +93,12 @@ public class ResourceMonitor {
 	
 	private Map<String, Object> config;
 
-	public ResourceMonitor(String id) {
+	public QoSMonitor(String id) {
 		this(id, null, null);
 	}
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" }) 
-	public ResourceMonitor(String id, SimpleZookeeperClient zooKeeperClient, Map config) {
+	public QoSMonitor(String id, SimpleZookeeperClient zooKeeperClient, Map config) {
 	
 		this.config = (Map<String, Object>) config;
 		

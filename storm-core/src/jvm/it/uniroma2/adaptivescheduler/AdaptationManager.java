@@ -1,9 +1,9 @@
 package it.uniroma2.adaptivescheduler;
 
 import it.uniroma2.adaptivescheduler.persistence.DatabaseManager;
-import it.uniroma2.adaptivescheduler.scheduler.ContinuousScheduler;
+import it.uniroma2.adaptivescheduler.scheduler.AdaptiveScheduler;
 import it.uniroma2.adaptivescheduler.space.SpaceFactory;
-import it.uniroma2.adaptivescheduler.vivaldi.ResourceMonitor;
+import it.uniroma2.adaptivescheduler.vivaldi.QoSMonitor;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 
 import java.io.IOException;
@@ -28,13 +28,13 @@ public class AdaptationManager {
 	 */
 	private ISupervisor supervisor;
 	
-	private ResourceMonitor networkSpaceManager; 
+	private QoSMonitor networkSpaceManager; 
 	
 	private SimpleZookeeperClient zkClient;
 
 	private DatabaseManager databaseManager;
 	
-	private ContinuousScheduler continuousScheduler;
+	private AdaptiveScheduler continuousScheduler;
 	
 	@SuppressWarnings("rawtypes")
 	private Map config; 
@@ -93,8 +93,8 @@ public class AdaptationManager {
 			if (extendedSpace != null && extendedSpace.booleanValue() == true)
 				SpaceFactory.setUseExtendedSpace(true);
 
-			networkSpaceManager = new ResourceMonitor(supervisor.getSupervisorId(), zkClient, config);
-			continuousScheduler = new ContinuousScheduler(supervisor, zkClient, databaseManager, networkSpaceManager, config);
+			networkSpaceManager = new QoSMonitor(supervisor.getSupervisorId(), zkClient, config);
+			continuousScheduler = new AdaptiveScheduler(supervisor, zkClient, databaseManager, networkSpaceManager, config);
 			
 			/* Initialize managers */
 			networkSpaceManager.initialize();

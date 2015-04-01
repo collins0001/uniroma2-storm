@@ -15,12 +15,12 @@ import com.google.gson.JsonParseException;
 public class RequestHandler implements Runnable{
 
 	private final Socket clientSocket;
-	private final ResourceMonitor spaceManager;
+	private final QoSMonitor spaceManager;
 	private Gson gson;
 	
 	private final static boolean DEBUG = false;
 	
-	public RequestHandler(ResourceMonitor spaceManager, Socket clientSocket) {
+	public RequestHandler(QoSMonitor spaceManager, Socket clientSocket) {
 		this.clientSocket = clientSocket;
 		this.spaceManager = spaceManager;
 		

@@ -1,8 +1,4 @@
-package it.uniroma2.adaptivescheduler.scheduler;
-
-import it.uniroma2.adaptivescheduler.space.Point;
-import it.uniroma2.adaptivescheduler.space.Space;
-import it.uniroma2.adaptivescheduler.space.SpaceFactory;
+package it.uniroma2.adaptivescheduler.space;
 
 import java.util.Random;
 
