@@ -193,11 +193,6 @@
 			<version>1.4.178</version>
 		</dependency>
 
-		<dependency>
-			<groupId>StatServer</groupId>
-			<artifactId>StatServer</artifactId>
-			<version>1.0</version>
-		</dependency>
     </dependencies>
     <build>
         <sourceDirectory>src/jvm</sourceDirectory>

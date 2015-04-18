@@ -349,12 +349,6 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>StatServer</groupId>
-      <artifactId>StatServer</artifactId>
-      <version>1.0</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>reply</groupId>
       <artifactId>reply</artifactId>
       <version>0.3.0</version>
