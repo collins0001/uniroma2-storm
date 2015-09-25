@@ -373,7 +373,7 @@
   (if (conf ADAPTIVE-SCHEDULER-ENABLED)
     (do
       (log-message " ########################################################################### ")
-      (let [reliability (Utils/getNodeReliability)
+      (let [reliability (Utils/getNodeReliability conf)
             random (Random.)
             not-send (> (.nextDouble random) reliability)]
         (log-message "XXX: Supervisor - send heartbeat? " (not not-send))

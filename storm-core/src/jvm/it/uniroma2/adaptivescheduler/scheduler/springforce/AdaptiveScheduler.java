@@ -1,12 +1,14 @@
-package it.uniroma2.adaptivescheduler.scheduler;
+package it.uniroma2.adaptivescheduler.scheduler.springforce;
 
+import backtype.storm.metric.SystemBolt;
 import it.uniroma2.adaptivescheduler.entities.Node;
 import it.uniroma2.adaptivescheduler.persistence.DatabaseException;
 import it.uniroma2.adaptivescheduler.persistence.DatabaseManager;
 import it.uniroma2.adaptivescheduler.persistence.entities.Measurement;
-import it.uniroma2.adaptivescheduler.scheduler.internal.AugmentedExecutorDetails;
-import it.uniroma2.adaptivescheduler.scheduler.internal.RelatedComponentDetails;
-import it.uniroma2.adaptivescheduler.scheduler.internal.RelatedComponentDetails.Type;
+import it.uniroma2.adaptivescheduler.scheduler.IAdaptiveScheduler;
+import it.uniroma2.adaptivescheduler.scheduler.springforce.internal.AugmentedExecutorDetails;
+import it.uniroma2.adaptivescheduler.scheduler.springforce.internal.RelatedComponentDetails;
+import it.uniroma2.adaptivescheduler.scheduler.springforce.internal.RelatedComponentDetails.Type;
 import it.uniroma2.adaptivescheduler.space.KNNItem;
 import it.uniroma2.adaptivescheduler.space.KNearestNodes;
 import it.uniroma2.adaptivescheduler.space.LatencyPlusOneSpace;
@@ -20,13 +22,9 @@ import it.uniroma2.adaptivescheduler.vivaldi.QoSMonitor;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
 
 import java.io.BufferedWriter;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,9 +48,7 @@ import backtype.storm.scheduler.TopologyDetails;
 import backtype.storm.scheduler.WorkerSlot;
 import backtype.storm.task.GeneralTopologyContext;
 
-import com.google.gson.Gson;
-
-public class AdaptiveScheduler {
+public class AdaptiveScheduler implements IAdaptiveScheduler {
 
 	private double SPRING_FORCE_THRESHOLD = 1.0;
 	private double SPRING_FORCE_DELTA = 0.1;
@@ -219,13 +215,14 @@ public class AdaptiveScheduler {
 		}
 	}
 
-	
 
-	
+
+
 	public void schedule(Topologies topologies, 
 			Map<String, GeneralTopologyContext> topologiesContext, 
 			Cluster cluster){
-		
+
+		long start = System.currentTimeMillis();
 		Map<String, SchedulerAssignment> assignments = cluster.getAssignments();
 		Map<String, Node> knownNodes = networkSpaceManager.copyKnownNodesCoordinate();
 
@@ -246,7 +243,7 @@ public class AdaptiveScheduler {
 				incrementCooldownCounter(tid);
 				continue;
 			}
-			
+
 			System.out.println("[1/4] Monitor phase...");
 			List<AugmentedExecutorDetails> augmentedExecutors = monitor(tid, topology, topologyContext, cluster);
 			
@@ -288,8 +285,12 @@ public class AdaptiveScheduler {
 			}
 			
 		}
-		
-		
+
+
+		long elapsed = System.currentTimeMillis() - start;
+
+		System.out.println("end of scheduling, " + elapsed / 1000 + " secs and " + elapsed % 1000 + " ms passed.");
+
 	}
 	
 	/**
@@ -357,7 +358,7 @@ public class AdaptiveScheduler {
 			}
 
 			boolean aRelatedIsMigrating = false;
-			boolean unpinnedComponent = true;
+			boolean pinnedComponent = true;
 
 			/* Retrieve child and check if someone is migrating */
 			List<String> targetComponentsId = getTargetComponentsId(topologyContext, componentId);
@@ -369,7 +370,7 @@ public class AdaptiveScheduler {
 				aRelatedIsMigrating = isMigrating(topologyId, target);
 				
 				if (!target.startsWith("__")){
-					unpinnedComponent = false;
+					pinnedComponent = false;
 				}
 				
 				if (aRelatedIsMigrating){
@@ -382,7 +383,7 @@ public class AdaptiveScheduler {
 				continue;
 			}
 			
-			if (unpinnedComponent){
+			if (pinnedComponent){
 				/* All target components start with __ (system components): current component is a "leaf" of the graph */
 				continue;
 			}
@@ -393,13 +394,13 @@ public class AdaptiveScheduler {
 			if (sourceComponentsId == null)
 				continue;
 			
-			unpinnedComponent = true;
+			pinnedComponent = true;
 			for (String src : sourceComponentsId){
 
 				aRelatedIsMigrating = isMigrating(topologyId, src);
 				
 				if (!src.startsWith("__")){
-					unpinnedComponent = false;
+					pinnedComponent = false;
 				}
 				
 				if (aRelatedIsMigrating){
@@ -412,7 +413,7 @@ public class AdaptiveScheduler {
 				continue;
 			}
 			
-			if (unpinnedComponent){
+			if (pinnedComponent){
 				/* All source components start with __ (system components): current component is a "root" of the graph */
 				continue;
 			}
@@ -770,7 +771,7 @@ public class AdaptiveScheduler {
 		}
 		
 		return distance;
-		
+
 	}
 	
 	private boolean relativeDistanceIsBelowMigrationThreshold(double currentNodeDistance, double candidateNodeDistance){

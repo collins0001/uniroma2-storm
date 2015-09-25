@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -52,6 +53,7 @@ public class QoSMonitor {
 	
 	private static final boolean NS_DEBUG = false;
 	private static final String RELIABILITY_FILE = "reliability";
+	private static String RELIABILITY_FILE_PATH = "./" + RELIABILITY_FILE;
 	
 	/* Const */
 	private static final String ZK_COORDINATES_DIR = "/extension/networkspace/coordinates";
@@ -184,7 +186,14 @@ public class QoSMonitor {
 				System.out.println("Use node utilization as third dimension: "  +  EXTEND_SPACE_WITH_UTILIZATION);
 				System.out.println("Use node availability as third dimension: " + !EXTEND_SPACE_WITH_UTILIZATION);
 			}
-			
+
+			String sValue = (String) config.get(Config.ADAPTIVE_SCHEDULER_SPACE_RELIABILITY_PATH);
+			if(sValue != null){
+				RELIABILITY_FILE_PATH = (sValue.endsWith("/") ?
+						sValue + RELIABILITY_FILE:
+						sValue + "/" + RELIABILITY_FILE);
+				System.out.println("Path to reliability updated: " + RELIABILITY_FILE_PATH);
+			}
 		}
 	}
 	
@@ -207,7 +216,7 @@ public class QoSMonitor {
 			if (reliabilityValue > 100)
 				reliabilityValue = 100;
 			
-			File f = new File(RELIABILITY_FILE);
+			File f = new File(RELIABILITY_FILE_PATH);
 			BufferedWriter buffer;
 			try {
 				buffer = new BufferedWriter(new FileWriter(f));
@@ -222,7 +231,7 @@ public class QoSMonitor {
 		
 		double reliability = 1;
 		
-		File f = new File(RELIABILITY_FILE);
+		File f = new File(RELIABILITY_FILE_PATH);
 		BufferedReader buffer;
 		try {
 			buffer = new BufferedReader(new FileReader(f));

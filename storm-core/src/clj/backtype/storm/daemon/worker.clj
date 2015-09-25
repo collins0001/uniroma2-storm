@@ -47,7 +47,7 @@
   (if ((:conf worker) ADAPTIVE-SCHEDULER-ENABLED)
     (do
       (log-message " ########################################################################### ")
-      (let [reliability (Utils/getNodeReliability)
+      (let [reliability (Utils/getNodeReliability (:conf worker))
             random (Random.)
             not-send (> (.nextDouble random) reliability)]
         (log-message "XXX: Send heartbeat? " (not not-send))
@@ -382,7 +382,7 @@
 (defn simulate-reliability-on-incoming-connection [worker]
   (when ((:conf worker) ADAPTIVE-SCHEDULER-ENABLED)
     (log-message " ########################################################################### ")
-    (let [reliability (Utils/getNodeReliability)
+    (let [reliability (Utils/getNodeReliability (:conf worker))
           random (Random.)
           ;; Executing with p = (1-r)
           execute (> (.nextDouble random) reliability)]

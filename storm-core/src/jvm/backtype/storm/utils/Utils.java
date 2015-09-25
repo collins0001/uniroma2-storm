@@ -460,11 +460,22 @@ public class Utils {
     /* Functions added by Matteo Nardelli (UniRoma2) */ 
 	private static final String RELIABILITY_FILE = "reliability";
 	
-    public static double getNodeReliability(){
+    public static double getNodeReliability(Map conf){
 		
 		double reliability = 1;
-		
-		File f = new File(RELIABILITY_FILE);
+		String path_to_reliability;
+
+        // setup path to reliability file
+        if((path_to_reliability = (String) conf.get(Config.ADAPTIVE_SCHEDULER_SPACE_RELIABILITY_PATH)) != null)
+            path_to_reliability = (path_to_reliability.endsWith("/") ?
+                    path_to_reliability + RELIABILITY_FILE :
+                    path_to_reliability + "/" + RELIABILITY_FILE);
+        else
+            path_to_reliability = "./" + RELIABILITY_FILE;
+
+        System.out.println("Reliability File Path: " + path_to_reliability);
+
+		File f = new File(path_to_reliability);
 		BufferedReader buffer;
 		try {
 			buffer = new BufferedReader(new FileReader(f));

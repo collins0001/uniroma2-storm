@@ -1,7 +1,8 @@
 package it.uniroma2.adaptivescheduler;
 
 import it.uniroma2.adaptivescheduler.persistence.DatabaseManager;
-import it.uniroma2.adaptivescheduler.scheduler.AdaptiveScheduler;
+import it.uniroma2.adaptivescheduler.scheduler.IAdaptiveScheduler;
+import it.uniroma2.adaptivescheduler.scheduler.springforce.AdaptiveScheduler;
 import it.uniroma2.adaptivescheduler.space.SpaceFactory;
 import it.uniroma2.adaptivescheduler.vivaldi.QoSMonitor;
 import it.uniroma2.adaptivescheduler.zk.SimpleZookeeperClient;
@@ -26,6 +27,7 @@ public class AdaptationManager {
 	/**
 	 * Descriptor of current node (it's seen as a supervisor)
 	 */
+
 	private ISupervisor supervisor;
 	
 	private QoSMonitor networkSpaceManager; 
@@ -34,7 +36,7 @@ public class AdaptationManager {
 
 	private DatabaseManager databaseManager;
 	
-	private AdaptiveScheduler continuousScheduler;
+	private IAdaptiveScheduler continuousScheduler;
 	
 	@SuppressWarnings("rawtypes")
 	private Map config; 
@@ -94,11 +96,12 @@ public class AdaptationManager {
 				SpaceFactory.setUseExtendedSpace(true);
 
 			networkSpaceManager = new QoSMonitor(supervisor.getSupervisorId(), zkClient, config);
-			continuousScheduler = new AdaptiveScheduler(supervisor, zkClient, databaseManager, networkSpaceManager, config);
+			continuousScheduler = AdaptiveSchedulerFactory.getScheduler(config, supervisor, zkClient, databaseManager, networkSpaceManager, config);
+			//continuousScheduler = new AdaptiveScheduler(supervisor, zkClient, databaseManager, networkSpaceManager, config);
 			
 			/* Initialize managers */
-			networkSpaceManager.initialize();
 			continuousScheduler.initialize();
+			networkSpaceManager.initialize();
 		}
 	}
 		
@@ -226,11 +229,16 @@ public class AdaptationManager {
 		System.out.println("Execute Continuous Scheduler called!");
 		
 		if (topologies == null || cluster == null){
+			System.out.println("Either topologies or cluster is NULL!");
 			return;
 		}
 		if (continuousScheduler != null){
+			System.out.println("continuous scheduler is not null!");
+			System.out.println("Scheduler class: " + continuousScheduler.getClass().getSimpleName());
 			continuousScheduler.schedule(topologies, topologiesContext, cluster);
 		}
+		else
+			System.out.println("continuous scheduler is NULL!");
 		
 	}
 

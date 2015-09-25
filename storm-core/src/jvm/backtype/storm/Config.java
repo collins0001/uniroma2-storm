@@ -1044,8 +1044,80 @@ public class Config extends HashMap<String, Object> {
     public static final String ADAPTIVE_SCHEDULER_SPACE_USE_UTILIZATION = "adaptivescheduler.space.third.as.utilization";
     public static final Object ADAPTIVE_SCHEDULER_SPACE_USE_UTILIZATION_SCHEMA = Boolean.class;
 
-    
-    
+    /*
+     * Reliability file path.
+     */
+
+    public static final String ADAPTIVE_SCHEDULER_SPACE_RELIABILITY_PATH = "adaptivescheduler.space.reliability.path";
+    public static final Object ADAPTIVE_SCHEDULER_SPACE_RELIABILITY_PATH_SCHEMA = String.class;
+
+    /*
+     * Extra config for enabling adaptive scheduler choice. Added by Gabriele Scolastri.
+     */
+
+    public static final String ADAPTIVE_SCHEDULER_TYPE = "adaptivescheduler.type";
+    public static final Object ADAPTIVE_SCHEDULER_TYPE_SCHEMA = String.class;
+
+
+    /*
+     * Extra config for Gradient Step Scheduler ("GRADIENT_STEP"). Added by Gabriele Scolastri.
+     */
+
+    //public static final String ADAPTIVE_SCHEDULER_GRADIENTSTEP_RETRY_MODE = "adaptivescheduler.gradientstep.retry_mode";
+    //public static final Object ADAPTIVE_SCHEDULER_GRADIENTSTEP_RETRIES_TYPE_SCHEMA = String.class;
+
+    /**
+     * (Analyze phase) Maximum number of retries when halving the gradient modulus.
+     */
+    public static final String ADAPTIVE_SCHEDULER_GRADIENTSTEP_RETRY_MAX_COUNTER = "adaptivescheduler.gradientstep.retry_max_counter";
+    public static final Object ADAPTIVE_SCHEDULER_GRADIENTSTEP_RETRY_MAX_COUNTER_SCHEMA = Integer.class;
+
+    /**
+     * Number of rounds a topology must wait after a successful migration.
+     */
+    public static final String ADAPTIVE_SCHEDULER_GRADIENTSTEP_TOPOLOGY_COOLDOWN = "adaptivescheduler.gradientstep.topology_cooldown";
+    public static final Object ADAPTIVE_SCHEDULER_GRADIENTSTEP_TOPOLOGY_COOLDOWN_SCHEMA = Integer.class;
+
+    /**
+     * Sets the debug messages on log files
+     */
+    public static final String ADAPTIVE_SCHEDULER_GRADIENTSTEP_DEBUG = "adaptivescheduler.gradientstep.debug";
+    public static final Object ADAPTIVE_SCHEDULER_GRADIENTSTEP_DEBUG_SCHEMA = Boolean.class;
+
+    //public static final String ADAPTIVE_SCHEDULER_GRADIENTSTEP_RETRIES_MIN_STEP = "adaptivescheduler.gradientstep.retry_min_step";
+    //public static final Object ADAPTIVE_SCHEDULER_GRADIENTSTEP_RETRIES_MIN_STEP_SCHEMA = Double.class;
+
+    /**
+     * (Analyze phase) At each iteration of Gradient method, it's the minimum improvement required over the previous
+     * iteration in order to continue iterating. When the improvement over the previous iteration is below treshold,
+     * the algorithm stops and returns the value found.
+     */
+    public static final String ADAPTIVE_SCHEDULER_GRADIENTSTEP_IMPROVEMENT_TRESHOLD = "adaptivescheduler.gradientstep.improvement_treshold";
+    public static final Object ADAPTIVE_SCHEDULER_GRADIENTSTEP_IMPROVEMENT_TRESHOLD_SCHEMA = Double.class;
+
+    /**
+     * (Plan phase) When evaluating whether migrate on target node or not, this parameter specifies the minimum cost
+     * improvement required in order to execute migration. If improvement is below, migration is aborted.
+     */
+    public static final String ADAPTIVE_SCHEDULER_GRADIENTSTEP_MIGRATION_TRESHOLD = "adaptivescheduler.gradientstep.migration_treshold";
+    public static final Object ADAPTIVE_SCHEDULER_GRADIENTSTEP_MIGRATION_TRESHOLD_SCHEMA = Double.class;
+
+    /**
+     * (Plan phase) Let the "relative cost" be the difference between the physical node placement cost and the
+     * ideal placement cost. Migration improvement fraction indicates the improvement the relative migration cost (i.e.
+     * ideal vs target migrtation placement) with respect of the relative cost of the current placement (i.e. ideal vs
+     * current. In formulas: relativeMigrationCost < relativeCurrentCost * (1-fraction)
+     *
+     * An improvement fraction of 0.0 indicates that it's sufficient that the target node cost is below current node
+     * cost. Improvement of 1.0 forces the target node to be exaclty in the same spot as ideal placement. in between
+     * values define a "cost area" which is considered eligible for migration.
+     *
+     * If not set or below 0.0, defaults to 0. If above, defaults to 1.0.
+     *
+     */
+    public static final String ADAPTIVE_SCHEDULER_GRADIENTSTEP_MIGRATION_IMPROVEMENT_FRACTION = "adaptivescheduler.gradientstep.migration_improvement_fraction";
+    public static final Object ADAPTIVE_SCHEDULER_GRADIENTSTEP_MIGRATION_IMPROVEMENT_FRACTION_SCHEMA = Double.class;
+
     /*
     * End of the section added by the University of Rome "Tor Vergata"
     */

@@ -1,4 +1,4 @@
-package it.uniroma2.adaptivescheduler.scheduler.internal;
+package it.uniroma2.adaptivescheduler.scheduler.springforce.internal;
 
 import it.uniroma2.adaptivescheduler.entities.Node;
 
