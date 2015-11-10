@@ -20,6 +20,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -348,7 +349,7 @@ public class QoSMonitor {
 
 			nodesWithKnownPositionLock.lock();
 			try{
-				Set<String> disappearedNodes = nodesWithKnownPosition.keySet();
+				Set<String> disappearedNodes = new HashSet<String>(nodesWithKnownPosition.keySet());
 				
 				for(SupervisorDetails sv : supervisors){
 					/* Remove alive node from them considered disappeared */
