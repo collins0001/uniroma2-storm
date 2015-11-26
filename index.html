@@ -33,22 +33,44 @@ We want to open our code, and we are refactoring the code and working on the doc
 <h2>
 <a id="short-description" class="anchor" href="#short-description" aria-hidden="true"><span class="octicon octicon-link"></span></a>Short description</h2>
 
-<p>We have extended the Storm architecture to run distributed, adaptive, and QoS-aware scheduling algorithms. The extension introduces some key components on each worker node that enhance the system with adaptation capabilities, relying on a MAPE (Monitor, Analyze, Plan, and Execute) feedback loop periodically executed. Specifically, the newly introduced components are: the AdaptiveSchedulers, the QoSMonitors, and the WorkerMonitors.</p>
+<p>Distributed Storm is an extension of Apache Storm that supports the execution of distributed, adaptive, and QoS-aware scheduling algorithms. It introduces some key components on each worker node that enhance the system with adaptation capabilities, relying on a MAPE (Monitor, Analyze, Plan, and Execute) feedback loop periodically executed. Specifically, the newly introduced components are: the AdaptiveSchedulers, the QoSMonitors, and the WorkerMonitors.</p>
+
+<ul>
+<li>
+<em>AdaptiveScheduler</em> is located on each Supervisor and represents the distributed scheduler that executes the distributed
+placement policy;</li>
+<li>
+<em>QoSMonitor</em> estimates the network latency with respect to the other system nodes and monitors the QoS attributes of the worker node. Currently it monitors the node utilization. The information collected can be used by the AdaptiveScheduler.</li>
+<li>
+<em>WorkerMonitor</em> is executed for each Storm worker process and computes the data rate exchanged among the application components.The information collected can be used by the AdaptiveScheduler.</li>
+</ul>
+
+<p>Please, refer to the <a href="http://storm.apache.org/documentation.html">official Storm documentation</a> for better understanding used terminology.</p>
+
+<p>Further details on our extension of Storm can be found in: <a href="http://dl.acm.org/citation.cfm?id=2675743.2776766">http://dl.acm.org/citation.cfm?id=2675743.2776766</a></p>
+
+<h3>
+<a id="available-distributed-scheduling-algorithms" class="anchor" href="#available-distributed-scheduling-algorithms" aria-hidden="true"><span class="octicon octicon-link"></span></a>Available Distributed Scheduling Algorithms</h3>
 
 <p>The AdaptiveScheduler implements the following scheduling policies: </p>
 
 <ul>
 <li>Round Robin</li>
-<li>Pietzuch's algorithm: <a href="http://dl.acm.org/citation.cfm?id=1129909">http://dl.acm.org/citation.cfm?id=1129909</a>
+<li>Our version of the <a href="http://dl.acm.org/citation.cfm?id=1129909">Pietzuch's algorithm</a>: <a href="http://dl.acm.org/citation.cfm?id=2675743.2776766">http://dl.acm.org/citation.cfm?id=2675743.2776766</a>
 </li>
 </ul>
 
-<p>You can find further information about our extension of Storm through our papers: </p>
+<h2>
+<a id="status" class="anchor" href="#status" aria-hidden="true"><span class="octicon octicon-link"></span></a>Status</h2>
 
-<ul>
-<li>Distributed QoS-Aware Scheduling in Storm: <a href="http://dl.acm.org/citation.cfm?id=2675743.2776766">http://dl.acm.org/citation.cfm?id=2675743.2776766</a>
-</li>
-</ul>
+<p>Instable. Our source code is currently under revision.</p>
+
+<h2>
+<a id="citation" class="anchor" href="#citation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Citation</h2>
+
+<p>Please acknowledge the use of OpenCoarrays by citing the following publication:</p>
+
+<p>Valeria Cardellini, Vincenzo Grassi, Francesco Lo Presti, and Matteo Nardelli. 2015. Distributed QoS-aware scheduling in storm. In Proceedings of the 9th ACM International Conference on Distributed Event-Based Systems (DEBS '15). ACM, New York, NY, USA, 344-347. DOI=<a href="http://dx.doi.org/10.1145/2675743.2776766">http://dx.doi.org/10.1145/2675743.2776766</a></p>
 
       <footer class="site-footer">
         <span class="site-footer-owner"><a href="https://github.com/matnar/uniroma2-storm">Distributed Storm</a> is maintained by <a href="https://github.com/matnar">matnar</a>.</span>
