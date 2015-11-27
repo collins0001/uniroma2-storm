@@ -24,12 +24,20 @@
 
 <p>Distributed Storm is an extension of Apache Storm, developed at the University of Rome "Tor Vergata". We have extended Storm to provide distributed monitoring, scheduling and management capabilities.</p>
 
-<ol>
-<li><a href="#descr">Short Description</a></li>
-</ol>
+<p><strong>Table of content</strong>
+1. <a href="#description">Short Description</a>
+1.1. <a href="#scheduling-algorithms">Available Distributed Scheduling Algorithms</a>
+1.2. <a href="#citation">Citation</a>
+2. <a href="#status">Status</a>
+3. <a href="#doc">Documentation</a>
+4. <a href="#license">License</a>
+5. <a href="#publications">Publications</a>
+6. <a href="#team">Team</a></p>
+
+<hr>
 
 <h2>
-<a id="short-description" class="anchor" href="#short-description" aria-hidden="true"><span class="octicon octicon-link"></span></a><a name="descr"></a>Short description</h2>
+<a id="short-description" class="anchor" href="#short-description" aria-hidden="true"><span class="octicon octicon-link"></span></a><a name="description"></a>Short description</h2>
 
 <p>Distributed Storm is an extension of Apache Storm that supports the execution of distributed, adaptive, and QoS-aware scheduling algorithms. It introduces some key components on each worker node that enhance the system with adaptation capabilities, relying on a MAPE (Monitor, Analyze, Plan, and Execute) feedback loop periodically executed. Specifically, the newly introduced components are: the AdaptiveSchedulers, the QoSMonitors, and the WorkerMonitors.</p>
 
@@ -52,7 +60,7 @@ placement policy;</li>
 </ul>
 
 <h3>
-<a id="available-distributed-scheduling-algorithms" class="anchor" href="#available-distributed-scheduling-algorithms" aria-hidden="true"><span class="octicon octicon-link"></span></a>Available Distributed Scheduling Algorithms</h3>
+<a id="available-distributed-scheduling-algorithms" class="anchor" href="#available-distributed-scheduling-algorithms" aria-hidden="true"><span class="octicon octicon-link"></span></a><a name="scheduling-algorithms"></a>Available Distributed Scheduling Algorithms</h3>
 
 <p>The AdaptiveScheduler implements the following scheduling policies: </p>
 
@@ -62,19 +70,39 @@ placement policy;</li>
 </li>
 </ul>
 
+<h3>
+<a id="citation" class="anchor" href="#citation" aria-hidden="true"><span class="octicon octicon-link"></span></a><a name="citation"></a>Citation</h3>
+
+<p>Dear academics/scientists, please acknowledge the use of Distributed Storm by citing the following publication:</p>
+
+<p>Valeria Cardellini, Vincenzo Grassi, Francesco Lo Presti, and Matteo Nardelli. 2015. Distributed QoS-aware scheduling in storm. In Proceedings of the 9th ACM International Conference on Distributed Event-Based Systems (DEBS '15). ACM, New York, NY, USA, 344-347. DOI=<a href="http://dx.doi.org/10.1145/2675743.2776766">http://dx.doi.org/10.1145/2675743.2776766</a></p>
+
+<hr>
+
 <h2>
-<a id="status" class="anchor" href="#status" aria-hidden="true"><span class="octicon octicon-link"></span></a>Status</h2>
+<a id="status" class="anchor" href="#status" aria-hidden="true"><span class="octicon octicon-link"></span></a><a name="status"></a>Status</h2>
 
 <p>Instable. Our source code is currently under revision.</p>
 
+<hr>
+
 <h2>
-<a id="license" class="anchor" href="#license" aria-hidden="true"><span class="octicon octicon-link"></span></a>License</h2>
+<a id="documentation" class="anchor" href="#documentation" aria-hidden="true"><span class="octicon octicon-link"></span></a><a name="doc"></a>Documentation</h2>
+
+<p>For more information, you may want to consult our <a href="https://github.com/matnar/uniroma2-storm/wiki">wiki pages</a>. </p>
+
+<hr>
+
+<h2>
+<a id="license" class="anchor" href="#license" aria-hidden="true"><span class="octicon octicon-link"></span></a><a name="license"></a>License</h2>
 
 <p>Distributed Storm is under Apache License, Version 2.0 (the "License"); you may not use these files except in compliance
 with the License. You may obtain a copy of the License at <a href="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0</a>. See the NOTICE file distributed with this work for additional information regarding copyright ownership. Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the License for the specific language governing permissions and limitations under the License.</p>
 
+<hr>
+
 <h2>
-<a id="publications" class="anchor" href="#publications" aria-hidden="true"><span class="octicon octicon-link"></span></a>Publications</h2>
+<a id="publications" class="anchor" href="#publications" aria-hidden="true"><span class="octicon octicon-link"></span></a><a name="publications"></a>Publications</h2>
 
 <ul>
 <li>V. Cardellini, V. Grassi, F. Lo Presti, M. Nardelli, "Poster: Distributed QoS-aware scheduling in Storm", Proceedings of the 9th ACM International Conference on Distributed Event-Based Systems (DEBS 2015), 4 pages, Oslo, Norway, July 2015. ACM.: <a href="http://dl.acm.org/citation.cfm?id=2675743.2776766">http://dl.acm.org/citation.cfm?id=2675743.2776766</a>
@@ -82,26 +110,21 @@ with the License. You may obtain a copy of the License at <a href="http://www.ap
 <li>V. Cardellini, V. Grassi, F. Lo Presti, M. Nardelli, "On QoS-aware scheduling of data stream applications over fog computing infrastructures", Proceedings of the 5th International Workshop on Management of Cloud and Smart City Systems 2015 (MOCS 2015), in conjunction with IEEE ISCC 2015, 6 pages, Larnaca, Cyprus, July 2015. IEEE.</li>
 </ul>
 
-<h1>
-<a id="team" class="anchor" href="#team" aria-hidden="true"><span class="octicon octicon-link"></span></a>Team</h1>
+<hr>
+
+<h2>
+<a id="team" class="anchor" href="#team" aria-hidden="true"><span class="octicon octicon-link"></span></a><a name="team"></a>Team</h2>
 
 <p>Matteo Nardelli (reference)</p>
 
-<h2>
-<a id="collaborators" class="anchor" href="#collaborators" aria-hidden="true"><span class="octicon octicon-link"></span></a>Collaborators</h2>
+<h3>
+<a id="collaborators" class="anchor" href="#collaborators" aria-hidden="true"><span class="octicon octicon-link"></span></a>Collaborators</h3>
 
 <p>Valeria Cardellini</p>
 
 <p>Francesco Lo Presti</p>
 
 <p>Vincenzo Grassi</p>
-
-<h1>
-<a id="citation" class="anchor" href="#citation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Citation</h1>
-
-<p>Please acknowledge the use of Distributed Storm by citing the following publication:</p>
-
-<p>Valeria Cardellini, Vincenzo Grassi, Francesco Lo Presti, and Matteo Nardelli. 2015. Distributed QoS-aware scheduling in storm. In Proceedings of the 9th ACM International Conference on Distributed Event-Based Systems (DEBS '15). ACM, New York, NY, USA, 344-347. DOI=<a href="http://dx.doi.org/10.1145/2675743.2776766">http://dx.doi.org/10.1145/2675743.2776766</a></p>
 
       <footer class="site-footer">
         <span class="site-footer-owner"><a href="https://github.com/matnar/uniroma2-storm">Distributed Storm</a> is maintained by <a href="https://github.com/matnar">matnar</a>.</span>
