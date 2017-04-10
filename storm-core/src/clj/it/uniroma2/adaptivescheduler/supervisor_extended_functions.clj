@@ -3,7 +3,8 @@
   (:use [backtype.storm.daemon common])
   (:require [backtype.storm.daemon [worker :as worker]])
   (:import [backtype.storm.scheduler INimbus SupervisorDetails WorkerSlot TopologyDetails
-           Cluster Topologies SchedulerAssignment SchedulerAssignmentImpl DefaultScheduler ExecutorDetails])
+           Cluster Topologies SchedulerAssignment SchedulerAssignmentImpl ExecutorDetails])
+  ;; 	   Cluster Topologies SchedulerAssignment SchedulerAssignmentImpl DefaultScheduler ExecutorDetails])
   (:import [it.uniroma2.adaptivescheduler.scheduler StubNimbus])
   ;; (:gen-class 
   ;;   :methods [#^{:static true} [otherFn [] void]])
